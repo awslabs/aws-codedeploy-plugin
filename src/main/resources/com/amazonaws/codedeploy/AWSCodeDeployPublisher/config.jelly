@@ -1,0 +1,61 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <f:entry title="AWS CodeDeploy Application Name" field="applicationName">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="AWS CodeDeploy Deployment Group" field="deploymentGroupName">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="AWS CodeDeploy Deployment Config" field="deploymentConfig">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="AWS Region" field="region">
+    <f:select />
+  </f:entry>
+  <f:entry title="S3 Bucket" field="s3bucket">
+    <f:textbox />
+  </f:entry>
+  <f:entry title="S3 Prefix" field="s3prefix">
+    <f:textbox default="/" />
+  </f:entry>
+  <f:entry title="Include Files" field="includes">
+    <f:textbox default="**" />
+  </f:entry>
+  <f:entry title="Exclude Files" field="excludes">
+    <f:textbox default="" />
+  </f:entry>
+
+  <f:optionalBlock title="Wait for deployment to finish?" field="waitForCompletion"  checked="${instance.getWaitForCompletion()}">
+    <f:entry title="Polling Timeout (s)" field="pollingTimeout">
+      <f:textbox default="300"/>
+    </f:entry>
+    <f:entry title="Polling Frequency (s)" field="pollingFreq">
+      <f:textbox default="15"/>
+    </f:entry>
+  </f:optionalBlock>
+
+  <f:radioBlock title="Use Access/Secret keys" field="longLivedCreds" checked="${instance.getUseLongLivedCreds()}">
+    <f:description>
+      If these keys are left blank, the plugin will attempt to use credentials from the default provider chain. That
+      is: Environment Variables, Java System properties, credentials profile file, and finally, EC2 Instance profile.
+    </f:description>
+    <f:entry title="AWS Access Key" name="codedeploy" help="/plugin/codedeploy/help-awsAccessKey.html">
+      <f:textbox field="awsAccessKey" />
+    </f:entry>
+    <f:entry title="AWS Secret Key" name="codedeploy" help="/plugin/codedeploy/help-awsSecretKey.html">
+      <f:password field="awsSecretKey" />
+    </f:entry>
+  </f:radioBlock>
+
+  <f:radioBlock title="Use temporary credentials" field="tempCreds" checked="${instance.getUseTempCreds()}">
+    <f:entry title="IAM Role ARN" field="iamRoleArn">
+      <f:textbox />
+    </f:entry>
+    <f:description>
+      This plugin uses temporary access keys via the AWS Security Token Service. For instructions on setting this up,
+      see the help text on the "IAM Role ARN" field above.<br/><br/>
+      AWS Account ID: <strong>${descriptor.accountId}</strong><br/>
+      External ID: <strong>${descriptor.externalId}</strong>
+    </f:description>
+    <f:validateButton title="${%Test Connection}" progress="${%Testing...}" method="testConnection" with="s3bucket,applicationName,region,iamRoleArn" />
+  </f:radioBlock>
+</j:jelly>

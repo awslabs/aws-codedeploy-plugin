@@ -1,0 +1,20 @@
+<div>
+  <p>
+  In order to keep your application(s) more secure, this plugin only uses temporary credentials via STS, scoped to each application. To set this up:
+  </p>
+
+  <ol>
+    <li>Log into the AWS Management Console, and navigate to the <a href="https://console.aws.amazon.com/iam/">Identity and Access Management console</a>.</li>
+    <li>Click on <a href="https://console.aws.amazon.com/iam/#roles">Roles</a>,  then click <strong>Create New Role</strong>.</li>
+    <li>Give an appropriate name for this role (for example, "JenkinsCodeDeployProject").</li>
+    <li>In the "Select Role Type" screen, click "Role for Cross-Account Access" then select <strong>Allows IAM users from a 3rd party AWS account to access this account.</strong></li>
+    <li>The account and external IDs for this Jenkins project are listed below</li>
+    <li>In the policy screen, select <strong>Custom Policy</strong> and copy-paste the following policy:
+      <ul>
+        <li><code>{"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": ["codedeploy:*", "s3:*"], "Resource": "*"}]}</code></li>
+      </ul>
+    </li>
+    <li>Click <strong>Create Role</strong>, then copy-paste the <strong>Role ARN</strong> into the below field.</li>
+    <li>Click the <strong>Test Connection</strong> button to ensure that the permissions are set up properly.</li>
+  </ol>
+</div>

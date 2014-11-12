@@ -1,0 +1,65 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.jenkins-ci.plugins</groupId>
+    <artifactId>plugin</artifactId>
+    <version>1.554</version>
+  </parent>
+
+  <artifactId>codedeploy</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>hpi</packaging>
+  <groupId>com.amazonaws</groupId>
+  <name>AWS CodeDeploy Plugin for Jenkins</name>
+  <description>Adds a post-build step to integrate Jenkins with AWS CodeDeploy</description>
+
+  <developers>
+    <developer>
+      <id>afitzgibbon</id>
+      <name>Andrew Fitz Gibbon</name>
+      <email>gibbon@amazon.com</email>
+    </developer>
+  </developers>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+    </license>
+  </licenses>
+
+  <scm>
+    <connection>scm:git:ssh://github.com/jenkinsci/aws-codedeploy-plugin.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/jenkinsci/aws-codedeploy-plugin.git</developerConnection>
+    <url>https://github.com/jenkinsci/aws-codedeploy-plugin</url>
+  </scm>
+
+  <repositories>
+    <repository>
+      <id>repo.jenkins-ci.org</id>
+      <url>http://repo.jenkins-ci.org/public/</url>
+    </repository>
+  </repositories>
+
+  <properties>
+    <jackson.version>2.1.1</jackson.version>
+    <spring.version>3.0.7.RELEASE</spring.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk.codedeploy</artifactId>
+      <version>1.8.11</version>
+    </dependency>
+  </dependencies>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>repo.jenkins-ci.org</id>
+      <url>http://repo.jenkins-ci.org/public/</url>
+    </pluginRepository>
+  </pluginRepositories>
+
+</project>

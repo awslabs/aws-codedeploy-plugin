@@ -1,0 +1,5 @@
+* Add "Advanced" section with polling timeout, polling frequency, bundle format (zip, tar, or tgz)
+* Prepare plugin for Jenkins' release process (https://wiki.jenkins-ci.org/display/JENKINS/Hosting+Plugins)
+* Properly handle errors like "Application doesn't exist" (Optional: create the application?)
+* Add ability to deploy to multiple deployment groups (nice to have: fetch list of deployment groups for the application)
+* Catch deployment in progress error and wait...
