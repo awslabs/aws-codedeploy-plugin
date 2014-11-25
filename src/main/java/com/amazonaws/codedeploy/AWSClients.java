@@ -76,9 +76,9 @@ public class AWSClients {
         }
 
         if (this.iamRole != null && !this.iamRole.isEmpty()) {
-        	AWSCredentials credentials = getCredentials();
+            AWSCredentials credentials = getCredentials();
 
-            s3 = new AmazonS3Client(clientCfg);
+            s3 = new AmazonS3Client(credentials,clientCfg);
             codedeploy = new AmazonCodeDeployClient(credentials,clientCfg);
         } else {
             // Fall back to the default provide chain when iamRole isn't set. This will usually mean that the user
