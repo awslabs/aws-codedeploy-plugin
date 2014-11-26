@@ -59,6 +59,8 @@ import java.io.PrintStream;
 import java.util.Date;
 import java.util.UUID;
 
+import javax.servlet.ServletException;
+
 /**
  * The AWS CodeDeploy Publisher is a post-build plugin that adds the ability to start a new CodeDeploy deployment
  * with the project's workspace as the application revision.
@@ -187,7 +189,7 @@ public class AWSCodeDeployPublisher extends Publisher {
             logger.println("Skipping CodeDeploy publisher as build failed");
             return true;
         }
-
+        
         this.aws = new AWSClients(
                 this.region,
                 this.iamRoleArn,
@@ -403,6 +405,13 @@ public class AWSCodeDeployPublisher extends Publisher {
             }
         }
 
+        public FormValidation doCheckName(@QueryParameter String value)
+                throws IOException, ServletException {
+            if (value.length() == 0)
+                return FormValidation.error("Please add the appropriate values");
+            return FormValidation.ok();
+        }
+        
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
             // Indicates that this builder can be used with all kinds of project types 
             return true;
@@ -417,21 +426,13 @@ public class AWSCodeDeployPublisher extends Publisher {
 
         @Override
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
-            req.bindJSON(this, formData);
 
-            JSONObject codeDeployJson = formData.getJSONObject("codedeploy");
-            try {
-                setAwsAccessKey(codeDeployJson.getString("awsAccessKey"));
-                setAwsSecretKey(codeDeployJson.getString("awsSecretKey"));
-                setProxyHost(codeDeployJson.getString("proxyHost"));
-                setProxyPort(Integer.parseInt(codeDeployJson.getString("proxyPort")));
-            } catch (JSONException e) {
-                setAwsAccessKey("");
-                setAwsSecretKey("");
-                setProxyHost("");
-                setProxyPort(0);
-            }
-
+        	awsAccessKey = formData.getString("awsAccessKey");
+        	awsSecretKey = formData.getString("awsSecretKey");
+        	proxyHost = formData.getString("proxyHost");
+        	proxyPort = Integer.valueOf(formData.getString("proxyPort"));
+        	
+        	req.bindJSON(this, formData);
             save();
             return super.configure(req, formData);
         }
@@ -461,7 +462,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         }
         
         public String getAccountId() {
-            return AWSClients.getAccountId(proxyHost, proxyPort);
+            return AWSClients.getAccountId(getProxyHost(), getProxyPort());
         }
 
         public FormValidation doTestConnection(
@@ -590,5 +591,14 @@ public class AWSCodeDeployPublisher extends Publisher {
     public String getRegion() {
         return region;
     }
+    
+    public String getProxyHost() {
+    	return proxyHost;
+    }
+    
+    public int getProxyPort() {
+    	return proxyPort;
+    }
+
 }
 

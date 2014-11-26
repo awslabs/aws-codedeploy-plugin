@@ -57,8 +57,8 @@ public class AWSClients {
     private final String iamRole;
     private final String externalId;
     private final String region;
-    private final String proxyHost;
-    private final int proxyPort;
+    private String proxyHost;
+    private int proxyPort;
 
     public AWSClients(String region, String iamRole, String externalId, String proxyHost, int proxyPort) {
 
@@ -70,7 +70,7 @@ public class AWSClients {
         
         //setup proxy connection:
         ClientConfiguration clientCfg = new ClientConfiguration();
-        if (proxyHost != null && proxyPort != 0 ) {
+        if (proxyHost != null && proxyPort > 0 ) {
             clientCfg.setProxyHost(proxyHost);
             clientCfg.setProxyPort(proxyPort);
         }
@@ -101,7 +101,7 @@ public class AWSClients {
         String arn = "";
         try {
             ClientConfiguration clientCfg = new ClientConfiguration();
-            if (proxyHost != null && proxyPort != 0 ) {
+            if (proxyHost != null && proxyPort > 0 ) {
                 clientCfg.setProxyHost(proxyHost);
                 clientCfg.setProxyPort(proxyPort);
             }
@@ -176,5 +176,15 @@ public class AWSClients {
 	public String getProxyHost()
 	{
 		return proxyHost;
+	}
+	
+	public void setProxyHost(String proxyHost)
+	{
+		this.proxyHost = proxyHost;
+	}
+
+	public void setProxyPort(int proxyPort)
+	{
+		this.proxyPort = proxyPort;
 	}
 }
