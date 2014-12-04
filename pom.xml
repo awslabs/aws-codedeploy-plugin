@@ -12,6 +12,7 @@
   <groupId>com.amazonaws</groupId>
   <name>AWS CodeDeploy Plugin for Jenkins</name>
   <description>Adds a post-build step to integrate Jenkins with AWS CodeDeploy</description>
+  <url>https://wiki.jenkins-ci.org/display/JENKINS/AWS+Codedeploy+plugin</url>
 
   <developers>
     <developer>
