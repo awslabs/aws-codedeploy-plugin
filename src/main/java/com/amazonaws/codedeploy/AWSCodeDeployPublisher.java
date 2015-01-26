@@ -92,7 +92,6 @@ public class AWSCodeDeployPublisher extends Publisher {
     private boolean useTempCreds;
 
     private PrintStream logger;
-    private AWSClients  aws;
 
     // Fields in config.jelly must match the parameter names in the "DataBoundConstructor"
     @DataBoundConstructor
@@ -181,7 +180,7 @@ public class AWSCodeDeployPublisher extends Publisher {
             return true;
         }
 
-        this.aws = new AWSClients(
+        AWSClients aws = new AWSClients(
                 this.region,
                 this.iamRoleArn,
                 this.getDescriptor().getExternalId()
@@ -191,15 +190,15 @@ public class AWSCodeDeployPublisher extends Publisher {
 
         try {
 
-            verifyCodeDeployApplication();
+            verifyCodeDeployApplication(aws);
 
             String projectName = build.getProject().getName();
-            RevisionLocation revisionLocation = zipAndUpload(projectName, build.getWorkspace());
+            RevisionLocation revisionLocation = zipAndUpload(aws, projectName, build.getWorkspace());
 
-            registerRevision(revisionLocation);
-            String deploymentId = createDeployment(revisionLocation);
+            registerRevision(aws, revisionLocation);
+            String deploymentId = createDeployment(aws, revisionLocation);
 
-            success = waitForDeployment(deploymentId);
+            success = waitForDeployment(aws, deploymentId);
 
         } catch (Exception e) {
 
@@ -213,7 +212,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         return success;
     }
 
-    private void verifyCodeDeployApplication() throws IllegalArgumentException {
+    private void verifyCodeDeployApplication(AWSClients aws) throws IllegalArgumentException {
         // Check that the application exists
         ListApplicationsResult applications = aws.codedeploy.listApplications();
 
@@ -232,7 +231,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         }
     }
 
-    private RevisionLocation zipAndUpload(String projectName, FilePath workspace) throws IOException,  InterruptedException {
+    private RevisionLocation zipAndUpload(AWSClients aws, String projectName, FilePath workspace) throws IOException,  InterruptedException {
 
         File zipFile = File.createTempFile(projectName + "-", ".zip");
         this.logger.println("Zipping workspace into " + zipFile.getAbsolutePath());
@@ -271,7 +270,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         return revisionLocation;
     }
 
-    private void registerRevision(RevisionLocation revisionLocation) {
+    private void registerRevision(AWSClients aws, RevisionLocation revisionLocation) {
 
         this.logger.println("Registering revision for application '" + this.applicationName + "'");
 
@@ -283,7 +282,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         );
     }
 
-    private String createDeployment(RevisionLocation revisionLocation) throws Exception {
+    private String createDeployment(AWSClients aws, RevisionLocation revisionLocation) throws Exception {
 
         this.logger.println("Creating deployment with revision at " + revisionLocation);
 
@@ -299,7 +298,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         return createDeploymentResult.getDeploymentId();
     }
 
-    private boolean waitForDeployment(String deploymentId) throws InterruptedException {
+    private boolean waitForDeployment(AWSClients aws, String deploymentId) throws InterruptedException {
 
         if (!this.waitForCompletion) {
             return true;
