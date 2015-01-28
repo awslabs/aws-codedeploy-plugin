@@ -38,11 +38,11 @@
       If these keys are left blank, the plugin will attempt to use credentials from the default provider chain. That
       is: Environment Variables, Java System properties, credentials profile file, and finally, EC2 Instance profile.
     </f:description>
-    <f:entry title="AWS Access Key" name="codedeploy" help="/plugin/codedeploy/help-awsAccessKey.html">
-      <f:textbox field="awsAccessKey" />
+    <f:entry title="AWS Access Key" name="codedeploy" field="awsAccessKey">
+      <f:textbox />
     </f:entry>
-    <f:entry title="AWS Secret Key" name="codedeploy" help="/plugin/codedeploy/help-awsSecretKey.html">
-      <f:password field="awsSecretKey" />
+    <f:entry title="AWS Secret Key" name="codedeploy" field="awsSecretKey">
+      <f:password />
     </f:entry>
   </f:radioBlock>
 
