@@ -87,9 +87,9 @@ public class AWSCodeDeployPublisher extends Publisher {
     private final String region;
     private final String includes;
     private final String excludes;
-
-    private boolean useLongLivedCreds;
-    private boolean useTempCreds;
+    private final String awsAccessKey;
+    private final String awsSecretKey;
+    private final String credentials;
 
     private PrintStream logger;
 
@@ -103,21 +103,25 @@ public class AWSCodeDeployPublisher extends Publisher {
             String deploymentConfig,
             String region,
             JSONObject waitForCompletion,
-            String externalId,
+            String credentials,
+            String awsAccessKey,
+            String awsSecretKey,
             String iamRoleArn,
+            String externalId,
             String includes,
-            String excludes,
-            JSONObject tempCreds,
-            JSONObject longLivedCreds) {
+            String excludes) {
 
         this.externalId = externalId;
-        this.iamRoleArn = iamRoleArn;
         this.applicationName = applicationName;
         this.deploymentGroupName = deploymentGroupName;
         this.deploymentConfig = deploymentConfig;
         this.region = region;
         this.includes = includes;
         this.excludes = excludes;
+        this.credentials = credentials;
+        this.awsAccessKey = awsAccessKey;
+        this.awsSecretKey = awsSecretKey;
+        this.iamRoleArn = iamRoleArn;
 
         if (waitForCompletion != null) {
             this.waitForCompletion = true;
@@ -139,7 +143,6 @@ public class AWSCodeDeployPublisher extends Publisher {
             this.pollingFreqSec = null;
         }
 
-        setCredentials(tempCreds, longLivedCreds);
 
         this.s3bucket = s3bucket;
         if (s3prefix == null || s3prefix.equals("/") || s3prefix.length() == 0) {
@@ -148,26 +151,6 @@ public class AWSCodeDeployPublisher extends Publisher {
             this.s3prefix = s3prefix;
         }
 
-    }
-
-    /**
-     * We can't simultaneously use temporary and long-lived credentials, so here we ensure that if one is set,
-     * the other isn't.
-     *
-     * @param tempCreds
-     * @param longLivedCreds
-     */
-    private void setCredentials(JSONObject tempCreds, JSONObject longLivedCreds) {
-        if (tempCreds == null) {
-            // If neither are set (the starting default when the plugin is first installed),
-            // or "use long-lived creds" is selected, then
-
-            this.useLongLivedCreds = true;
-            this.useTempCreds = false;
-        } else if (longLivedCreds == null) {
-            this.useLongLivedCreds = false;
-            this.useTempCreds = true;
-        }
     }
 
     @Override
@@ -467,47 +450,46 @@ public class AWSCodeDeployPublisher extends Publisher {
     }
 
     public String getApplicationName() {
-
         return applicationName;
     }
 
     public String getDeploymentGroupName() {
-
         return deploymentGroupName;
     }
 
     public String getS3bucket() {
-
         return s3bucket;
     }
 
     public String getS3prefix() {
-
         return s3prefix;
     }
 
     public Long getPollingTimeoutSec() {
-
         return pollingTimeoutSec;
     }
 
     public String getIamRoleArn() {
-
         return iamRoleArn;
     }
 
-    public Long getPollingFreqSec() {
+    public String getAwsAccessKey() {
+        return awsAccessKey;
+    }
 
+    public String getAwsSecretKey() {
+        return awsSecretKey;
+    }
+
+    public Long getPollingFreqSec() {
         return pollingFreqSec;
     }
 
     public String getDeploymentConfig() {
-
         return deploymentConfig;
     }
 
     public String getExternalId() {
-
         return externalId;
     }
 
@@ -515,12 +497,8 @@ public class AWSCodeDeployPublisher extends Publisher {
         return waitForCompletion;
     }
 
-    public boolean getUseTempCreds() {
-        return useTempCreds;
-    }
-
-    public boolean getUseLongLivedCreds() {
-        return useLongLivedCreds;
+    public String getCredentials() {
+        return credentials;
     }
 
     public String getIncludes() {
