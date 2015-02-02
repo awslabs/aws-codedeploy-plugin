@@ -16,6 +16,7 @@ package com.amazonaws.codedeploy;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
@@ -36,6 +37,8 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.UUID;
 
+import static org.apache.commons.lang.StringUtils.isEmpty;
+
 /**
  * @author gibbon
  */
@@ -46,32 +49,27 @@ public class AWSClients {
      **/
     private static final int ARN_ACCOUNT_ID_INDEX = 4;
 
-    public AmazonCodeDeployClient codedeploy;
-    public AmazonS3Client         s3;
+    public final AmazonCodeDeployClient codedeploy;
+    public final AmazonS3Client         s3;
 
-    private final String iamRole;
     private final String externalId;
     private final String region;
 
-    public AWSClients(String region, String iamRole, String externalId) {
 
+    public AWSClients(String region, AWSCredentials credentials, String externalId) {
         this.region = region;
-        this.iamRole = iamRole;
         this.externalId = externalId;
-
-        if (this.iamRole != null && !this.iamRole.isEmpty()) {
-            AWSCredentials credentials = getCredentials();
-
-            s3 = new AmazonS3Client(credentials);
-            codedeploy = new AmazonCodeDeployClient(credentials);
-        } else {
-            // Fall back to the default provide chain when iamRole isn't set. This will usually mean that the user
-            // unchecked "Use temp creds".
-            s3 = new AmazonS3Client();
-            codedeploy = new AmazonCodeDeployClient();
-        }
-
+        this.s3 = credentials != null ? new AmazonS3Client(credentials) : new AmazonS3Client();
+        this.codedeploy = credentials != null ? new AmazonCodeDeployClient(credentials): new AmazonCodeDeployClient();
         codedeploy.setRegion(Region.getRegion(Regions.fromName(this.region)));
+    }
+
+    public AWSClients(String region, String iamRole, String externalId) {
+        this(region, getCredentials(iamRole, externalId), externalId);
+    }
+
+    public AWSClients(String region, String awsAccessKey, String awsSecretKey, String externalId) {
+        this(region, new BasicAWSCredentials(awsAccessKey, awsSecretKey), externalId);
     }
 
     /**
@@ -119,7 +117,9 @@ public class AWSClients {
         return file;
     }
 
-    private AWSCredentials getCredentials() {
+    private static AWSCredentials getCredentials(String iamRole, String externalId) {
+        if (isEmpty(iamRole)) return null;
+
         AWSSecurityTokenServiceClient sts = new AWSSecurityTokenServiceClient();
 
         int credsDuration = (int) (AWSCodeDeployPublisher.DEFAULT_TIMEOUT_SECONDS
@@ -130,10 +130,10 @@ public class AWSClients {
         }
 
         AssumeRoleResult assumeRoleResult = sts.assumeRole(new AssumeRoleRequest()
-                .withRoleArn(iamRole)
-                .withExternalId(externalId)
-                .withDurationSeconds(credsDuration)
-                .withRoleSessionName(AWSCodeDeployPublisher.ROLE_SESSION_NAME)
+                        .withRoleArn(iamRole)
+                        .withExternalId(externalId)
+                        .withDurationSeconds(credsDuration)
+                        .withRoleSessionName(AWSCodeDeployPublisher.ROLE_SESSION_NAME)
         );
 
         Credentials stsCredentials = assumeRoleResult.getCredentials();

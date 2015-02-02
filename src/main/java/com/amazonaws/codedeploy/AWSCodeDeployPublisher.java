@@ -163,11 +163,18 @@ public class AWSCodeDeployPublisher extends Publisher {
             return true;
         }
 
-        AWSClients aws = new AWSClients(
+        AWSClients aws;
+        if ("awsAccessKey".equals(credentials))
+            aws = new AWSClients(
+                    this.region,
+                    this.awsAccessKey,
+                    this.awsSecretKey,
+                    this.getDescriptor().getExternalId());
+        else
+            aws = new AWSClients(
                 this.region,
                 this.iamRoleArn,
-                this.getDescriptor().getExternalId()
-        );
+                this.getDescriptor().getExternalId());
 
         boolean success;
 
