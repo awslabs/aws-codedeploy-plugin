@@ -13,7 +13,7 @@ After building and installing the plugin, some simple configuration is needed
 for your project. 
 
 1. Open up your project configuration
-1. In the `Post-build Actions` section, select "Deploy and application to AWS
+1. In the `Post-build Actions` section, select "Deploy an application to AWS
 CodeDeploy"
 1. Application Name, Deployment Group, Deployment Config, and region are all
 required options.
