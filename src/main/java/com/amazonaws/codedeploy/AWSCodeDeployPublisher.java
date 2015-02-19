@@ -47,6 +47,7 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
+
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -57,6 +58,8 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Date;
 import java.util.UUID;
+
+import javax.servlet.ServletException;
 
 /**
  * The AWS CodeDeploy Publisher is a post-build plugin that adds the ability to start a new CodeDeploy deployment
@@ -87,6 +90,8 @@ public class AWSCodeDeployPublisher extends Publisher {
     private final String region;
     private final String includes;
     private final String excludes;
+    private final String proxyHost;
+    private final int proxyPort;
 
     private boolean useLongLivedCreds;
     private boolean useTempCreds;
@@ -107,6 +112,8 @@ public class AWSCodeDeployPublisher extends Publisher {
             String iamRoleArn,
             String includes,
             String excludes,
+            String proxyHost,
+            int proxyPort,
             JSONObject tempCreds,
             JSONObject longLivedCreds) {
 
@@ -118,6 +125,8 @@ public class AWSCodeDeployPublisher extends Publisher {
         this.region = region;
         this.includes = includes;
         this.excludes = excludes;
+        this.proxyHost = proxyHost;
+        this.proxyPort = proxyPort;
 
         if (waitForCompletion != null) {
             this.waitForCompletion = true;
@@ -183,7 +192,9 @@ public class AWSCodeDeployPublisher extends Publisher {
         AWSClients aws = new AWSClients(
                 this.region,
                 this.iamRoleArn,
-                this.getDescriptor().getExternalId()
+                this.getDescriptor().getExternalId(),
+                this.proxyHost, 
+                this.proxyPort
         );
 
         boolean success;
@@ -378,6 +389,8 @@ public class AWSCodeDeployPublisher extends Publisher {
         private String externalId;
         private String awsAccessKey;
         private String awsSecretKey;
+		private String proxyHost;
+		private int proxyPort;
 
         /**
          * In order to load the persisted global configuration, you have to
@@ -391,6 +404,13 @@ public class AWSCodeDeployPublisher extends Publisher {
             }
         }
 
+        public FormValidation doCheckName(@QueryParameter String value)
+                throws IOException, ServletException {
+            if (value.length() == 0)
+                return FormValidation.error("Please add the appropriate values");
+            return FormValidation.ok();
+        }
+        
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
             // Indicates that this builder can be used with all kinds of project types 
             return true;
@@ -405,17 +425,13 @@ public class AWSCodeDeployPublisher extends Publisher {
 
         @Override
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
-            req.bindJSON(this, formData);
 
-            JSONObject codeDeployJson = formData.getJSONObject("codedeploy");
-            try {
-                awsAccessKey = codeDeployJson.getString("awsAccessKey");
-                awsSecretKey = codeDeployJson.getString("awsSecretKey");
-            } catch (JSONException e) {
-                awsAccessKey = "";
-                awsSecretKey = "";
-            }
-
+        	awsAccessKey = formData.getString("awsAccessKey");
+        	awsSecretKey = formData.getString("awsSecretKey");
+        	proxyHost = formData.getString("proxyHost");
+        	proxyPort = Integer.valueOf(formData.getString("proxyPort"));
+        	
+        	req.bindJSON(this, formData);
             save();
             return super.configure(req, formData);
         }
@@ -427,27 +443,47 @@ public class AWSCodeDeployPublisher extends Publisher {
         public void setExternalId(String externalId) {
             this.externalId = externalId;
         }
+        
+        public void setProxyHost(String proxyHost) {
+        	this.proxyHost = proxyHost;
+        }
 
+        public String getProxyHost() {
+        	return proxyHost;
+        }
+        
+        public void setProxyPort(int proxyPort) {
+        	this.proxyPort = proxyPort;
+        }
+
+        public int getProxyPort() {
+        	return proxyPort;
+        }
+        
         public String getAccountId() {
-            return AWSClients.getAccountId();
+            return AWSClients.getAccountId(getProxyHost(), getProxyPort());
         }
 
         public FormValidation doTestConnection(
                 @QueryParameter String s3bucket,
                 @QueryParameter String applicationName,
                 @QueryParameter String region,
-                @QueryParameter String iamRoleArn) {
+                @QueryParameter String iamRoleArn,
+                @QueryParameter String proxyHost,
+                @QueryParameter int proxyPort) {
 
             System.out.println("Testing connection with parameters: "
                     + s3bucket + ","
                     + applicationName + ","
                     + region + ","
                     + iamRoleArn + ","
-                    + this.externalId
+                    + this.externalId + ","
+                    + proxyHost + ","
+                    + proxyPort
             );
 
             try {
-                AWSClients awsClients = new AWSClients(region, iamRoleArn, this.externalId);
+                AWSClients awsClients = new AWSClients(region, iamRoleArn, this.externalId, proxyHost, proxyPort);
                 awsClients.testConnection(s3bucket, applicationName);
             } catch (Exception e) {
                 return FormValidation.error("Connection test failed with error: " + e.getMessage());
@@ -463,6 +499,26 @@ public class AWSCodeDeployPublisher extends Publisher {
             }
             return items;
         }
+
+		public String getAwsSecretKey()
+		{
+			return awsSecretKey;
+		}
+
+		public void setAwsSecretKey(String awsSecretKey)
+		{
+			this.awsSecretKey = awsSecretKey;
+		}
+
+		public String getAwsAccessKey()
+		{
+			return awsAccessKey;
+		}
+
+		public void setAwsAccessKey(String awsAccessKey)
+		{
+			this.awsAccessKey = awsAccessKey;
+		}
 
     }
 
@@ -534,5 +590,14 @@ public class AWSCodeDeployPublisher extends Publisher {
     public String getRegion() {
         return region;
     }
+    
+    public String getProxyHost() {
+    	return proxyHost;
+    }
+    
+    public int getProxyPort() {
+    	return proxyPort;
+    }
+
 }
 

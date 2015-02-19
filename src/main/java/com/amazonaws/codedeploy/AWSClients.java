@@ -15,8 +15,12 @@
 package com.amazonaws.codedeploy;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.BasicSessionCredentials;
+import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.codedeploy.AmazonCodeDeployClient;
@@ -33,6 +37,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.io.Writer;
 import java.util.UUID;
 
@@ -52,23 +57,35 @@ public class AWSClients {
     private final String iamRole;
     private final String externalId;
     private final String region;
+    private String proxyHost;
+    private int proxyPort;
 
-    public AWSClients(String region, String iamRole, String externalId) {
+    public AWSClients(String region, String iamRole, String externalId, String proxyHost, int proxyPort) {
 
         this.region = region;
         this.iamRole = iamRole;
         this.externalId = externalId;
+        this.proxyHost = proxyHost;
+        this.proxyPort = proxyPort;
+        
+        //setup proxy connection:
+        ClientConfiguration clientCfg = new ClientConfiguration();
+        if (proxyHost != null && proxyPort > 0 ) {
+            clientCfg.setProxyHost(proxyHost);
+            clientCfg.setProxyPort(proxyPort);
+        }
 
         if (this.iamRole != null && !this.iamRole.isEmpty()) {
             AWSCredentials credentials = getCredentials();
 
-            s3 = new AmazonS3Client(credentials);
-            codedeploy = new AmazonCodeDeployClient(credentials);
+            s3 = new AmazonS3Client(credentials,clientCfg);
+            codedeploy = new AmazonCodeDeployClient(credentials,clientCfg);
         } else {
             // Fall back to the default provide chain when iamRole isn't set. This will usually mean that the user
             // unchecked "Use temp creds".
-            s3 = new AmazonS3Client();
-            codedeploy = new AmazonCodeDeployClient();
+            
+            s3 = new AmazonS3Client(clientCfg);
+            codedeploy = new AmazonCodeDeployClient(clientCfg);
         }
 
         codedeploy.setRegion(Region.getRegion(Regions.fromName(this.region)));
@@ -79,11 +96,16 @@ public class AWSClients {
      * currently authenticated user.
      * @return 12-digit account id
      */
-    public static String getAccountId() {
+    public static String getAccountId(String proxyHost, int proxyPort) {
 
         String arn = "";
         try {
-            AmazonIdentityManagementClient iam = new AmazonIdentityManagementClient();
+            ClientConfiguration clientCfg = new ClientConfiguration();
+            if (proxyHost != null && proxyPort > 0 ) {
+                clientCfg.setProxyHost(proxyHost);
+                clientCfg.setProxyPort(proxyPort);
+            }
+            AmazonIdentityManagementClient iam = new AmazonIdentityManagementClient(clientCfg);
             GetUserResult user = iam.getUser();
             arn = user.getUser().getArn();
         } catch (AmazonServiceException e) {
@@ -145,4 +167,24 @@ public class AWSClients {
 
         return credentials;
     }
+
+	public int getProxyPort()
+	{
+		return proxyPort;
+	}
+
+	public String getProxyHost()
+	{
+		return proxyHost;
+	}
+	
+	public void setProxyHost(String proxyHost)
+	{
+		this.proxyHost = proxyHost;
+	}
+
+	public void setProxyPort(int proxyPort)
+	{
+		this.proxyPort = proxyPort;
+	}
 }
