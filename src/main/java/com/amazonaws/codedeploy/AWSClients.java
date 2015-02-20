@@ -14,16 +14,24 @@
  */
 package com.amazonaws.codedeploy;
 
+import static org.apache.commons.lang.StringUtils.isEmpty;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.util.UUID;
+
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.BasicSessionCredentials;
-import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.codedeploy.AmazonCodeDeployClient;
+import com.amazonaws.services.codedeploy.model.GetApplicationRequest;
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClient;
 import com.amazonaws.services.identitymanagement.model.GetUserResult;
 import com.amazonaws.services.s3.AmazonS3Client;
@@ -31,15 +39,6 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient;
 import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
 import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
 import com.amazonaws.services.securitytoken.model.Credentials;
-import com.amazonaws.services.codedeploy.model.GetApplicationRequest;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintStream;
-import java.io.Writer;
-import java.util.UUID;
 
 /**
  * @author gibbon
@@ -51,20 +50,15 @@ public class AWSClients {
      **/
     private static final int ARN_ACCOUNT_ID_INDEX = 4;
 
-    public AmazonCodeDeployClient codedeploy;
-    public AmazonS3Client         s3;
+    public final AmazonCodeDeployClient codedeploy;
+    public final AmazonS3Client         s3;
 
-    private final String iamRole;
-    private final String externalId;
     private final String region;
-    private String proxyHost;
-    private int proxyPort;
+    private final String proxyHost;
+    private final int proxyPort;
 
-    public AWSClients(String region, String iamRole, String externalId, String proxyHost, int proxyPort) {
-
+    public AWSClients(String region, AWSCredentials credentials, String proxyHost, int proxyPort) {
         this.region = region;
-        this.iamRole = iamRole;
-        this.externalId = externalId;
         this.proxyHost = proxyHost;
         this.proxyPort = proxyPort;
 
@@ -75,20 +69,21 @@ public class AWSClients {
             clientCfg.setProxyPort(proxyPort);
         }
 
-        if (this.iamRole != null && !this.iamRole.isEmpty()) {
-            AWSCredentials credentials = getCredentials();
-
-            s3 = new AmazonS3Client(credentials,clientCfg);
-            codedeploy = new AmazonCodeDeployClient(credentials,clientCfg);
-        } else {
-            // Fall back to the default provide chain when iamRole isn't set. This will usually mean that the user
-            // unchecked "Use temp creds".
-
-            s3 = new AmazonS3Client(clientCfg);
-            codedeploy = new AmazonCodeDeployClient(clientCfg);
-        }
-
+        this.s3 = credentials != null ? new AmazonS3Client(credentials, clientCfg) : new AmazonS3Client(clientCfg);
+        this.codedeploy = credentials != null ? new AmazonCodeDeployClient(credentials, clientCfg) : new AmazonCodeDeployClient(clientCfg);
         codedeploy.setRegion(Region.getRegion(Regions.fromName(this.region)));
+    }
+    
+    public static AWSClients fromDefaultCredentialChain(String region, String proxyHost, int proxyPort) {
+    	return new AWSClients(region, null, proxyHost, proxyPort);
+    }
+    
+    public static AWSClients fromIAMRole(String region, String iamRole, String externalId, String proxyHost, int proxyPort) {
+    	return new AWSClients(region, getCredentials(iamRole, externalId), proxyHost, proxyPort);
+    }
+    
+    public static AWSClients fromBasicCredentials(String region, String awsAccessKey, String awsSecretKey, String proxyHost, int proxyPort) {
+    	return new AWSClients(region, new BasicAWSCredentials(awsAccessKey, awsSecretKey), proxyHost, proxyPort);
     }
 
     /**
@@ -141,7 +136,9 @@ public class AWSClients {
         return file;
     }
 
-    private AWSCredentials getCredentials() {
+    private static AWSCredentials getCredentials(String iamRole, String externalId) {
+        if (isEmpty(iamRole)) return null;
+
         AWSSecurityTokenServiceClient sts = new AWSSecurityTokenServiceClient();
 
         int credsDuration = (int) (AWSCodeDeployPublisher.DEFAULT_TIMEOUT_SECONDS
@@ -152,10 +149,10 @@ public class AWSClients {
         }
 
         AssumeRoleResult assumeRoleResult = sts.assumeRole(new AssumeRoleRequest()
-                .withRoleArn(iamRole)
-                .withExternalId(externalId)
-                .withDurationSeconds(credsDuration)
-                .withRoleSessionName(AWSCodeDeployPublisher.ROLE_SESSION_NAME)
+                        .withRoleArn(iamRole)
+                        .withExternalId(externalId)
+                        .withDurationSeconds(credsDuration)
+                        .withRoleSessionName(AWSCodeDeployPublisher.ROLE_SESSION_NAME)
         );
 
         Credentials stsCredentials = assumeRoleResult.getCredentials();
@@ -174,13 +171,5 @@ public class AWSClients {
 
     public String getProxyHost() {
         return proxyHost;
-    }
-
-    public void setProxyHost(String proxyHost) {
-        this.proxyHost = proxyHost;
-    }
-
-    public void setProxyPort(int proxyPort) {
-        this.proxyPort = proxyPort;
     }
 }
