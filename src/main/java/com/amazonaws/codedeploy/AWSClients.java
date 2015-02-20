@@ -67,7 +67,7 @@ public class AWSClients {
         this.externalId = externalId;
         this.proxyHost = proxyHost;
         this.proxyPort = proxyPort;
-        
+
         //setup proxy connection:
         ClientConfiguration clientCfg = new ClientConfiguration();
         if (proxyHost != null && proxyPort > 0 ) {
@@ -83,7 +83,7 @@ public class AWSClients {
         } else {
             // Fall back to the default provide chain when iamRole isn't set. This will usually mean that the user
             // unchecked "Use temp creds".
-            
+
             s3 = new AmazonS3Client(clientCfg);
             codedeploy = new AmazonCodeDeployClient(clientCfg);
         }
@@ -168,23 +168,19 @@ public class AWSClients {
         return credentials;
     }
 
-	public int getProxyPort()
-	{
-		return proxyPort;
-	}
+    public int getProxyPort() {
+        return proxyPort;
+    }
 
-	public String getProxyHost()
-	{
-		return proxyHost;
-	}
-	
-	public void setProxyHost(String proxyHost)
-	{
-		this.proxyHost = proxyHost;
-	}
+    public String getProxyHost() {
+        return proxyHost;
+    }
 
-	public void setProxyPort(int proxyPort)
-	{
-		this.proxyPort = proxyPort;
-	}
+    public void setProxyHost(String proxyHost) {
+        this.proxyHost = proxyHost;
+    }
+
+    public void setProxyPort(int proxyPort) {
+        this.proxyPort = proxyPort;
+    }
 }

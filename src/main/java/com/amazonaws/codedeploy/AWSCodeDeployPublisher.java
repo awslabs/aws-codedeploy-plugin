@@ -193,7 +193,7 @@ public class AWSCodeDeployPublisher extends Publisher {
                 this.region,
                 this.iamRoleArn,
                 this.getDescriptor().getExternalId(),
-                this.proxyHost, 
+                this.proxyHost,
                 this.proxyPort
         );
 
@@ -389,8 +389,8 @@ public class AWSCodeDeployPublisher extends Publisher {
         private String externalId;
         private String awsAccessKey;
         private String awsSecretKey;
-		private String proxyHost;
-		private int proxyPort;
+        private String proxyHost;
+        private int proxyPort;
 
         /**
          * In order to load the persisted global configuration, you have to
@@ -410,7 +410,7 @@ public class AWSCodeDeployPublisher extends Publisher {
                 return FormValidation.error("Please add the appropriate values");
             return FormValidation.ok();
         }
-        
+
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
             // Indicates that this builder can be used with all kinds of project types 
             return true;
@@ -426,12 +426,12 @@ public class AWSCodeDeployPublisher extends Publisher {
         @Override
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
 
-        	awsAccessKey = formData.getString("awsAccessKey");
-        	awsSecretKey = formData.getString("awsSecretKey");
-        	proxyHost = formData.getString("proxyHost");
-        	proxyPort = Integer.valueOf(formData.getString("proxyPort"));
-        	
-        	req.bindJSON(this, formData);
+            awsAccessKey = formData.getString("awsAccessKey");
+            awsSecretKey = formData.getString("awsSecretKey");
+            proxyHost = formData.getString("proxyHost");
+            proxyPort = Integer.valueOf(formData.getString("proxyPort"));
+
+            req.bindJSON(this, formData);
             save();
             return super.configure(req, formData);
         }
@@ -443,23 +443,23 @@ public class AWSCodeDeployPublisher extends Publisher {
         public void setExternalId(String externalId) {
             this.externalId = externalId;
         }
-        
+
         public void setProxyHost(String proxyHost) {
-        	this.proxyHost = proxyHost;
+            this.proxyHost = proxyHost;
         }
 
         public String getProxyHost() {
-        	return proxyHost;
+            return proxyHost;
         }
-        
+
         public void setProxyPort(int proxyPort) {
-        	this.proxyPort = proxyPort;
+            this.proxyPort = proxyPort;
         }
 
         public int getProxyPort() {
-        	return proxyPort;
+            return proxyPort;
         }
-        
+
         public String getAccountId() {
             return AWSClients.getAccountId(getProxyHost(), getProxyPort());
         }
@@ -500,25 +500,25 @@ public class AWSCodeDeployPublisher extends Publisher {
             return items;
         }
 
-		public String getAwsSecretKey()
-		{
-			return awsSecretKey;
-		}
+        public String getAwsSecretKey()
+        {
+            return awsSecretKey;
+        }
 
-		public void setAwsSecretKey(String awsSecretKey)
-		{
-			this.awsSecretKey = awsSecretKey;
-		}
+        public void setAwsSecretKey(String awsSecretKey)
+        {
+            this.awsSecretKey = awsSecretKey;
+        }
 
-		public String getAwsAccessKey()
-		{
-			return awsAccessKey;
-		}
+        public String getAwsAccessKey()
+        {
+            return awsAccessKey;
+        }
 
-		public void setAwsAccessKey(String awsAccessKey)
-		{
-			this.awsAccessKey = awsAccessKey;
-		}
+        public void setAwsAccessKey(String awsAccessKey)
+        {
+            this.awsAccessKey = awsAccessKey;
+        }
 
     }
 
@@ -590,13 +590,13 @@ public class AWSCodeDeployPublisher extends Publisher {
     public String getRegion() {
         return region;
     }
-    
+
     public String getProxyHost() {
-    	return proxyHost;
+        return proxyHost;
     }
-    
+
     public int getProxyPort() {
-    	return proxyPort;
+        return proxyPort;
     }
 
 }

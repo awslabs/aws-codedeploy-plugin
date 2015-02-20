@@ -29,7 +29,7 @@
     <f:entry title="Proxy Port" field="proxyPort" help="/plugin/codedeploy/help-proxyPort.html">
     <f:textbox default="" />
   </f:entry>
-  
+
   <f:optionalBlock title="Wait for deployment to finish?" field="waitForCompletion"  checked="${instance.getWaitForCompletion()}">
     <f:entry title="Polling Timeout (s)" field="pollingTimeout">
       <f:textbox default="300"/>
