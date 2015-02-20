@@ -7,11 +7,12 @@
   </parent>
 
   <artifactId>codedeploy</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.4-SNAPSHOT</version>
   <packaging>hpi</packaging>
   <groupId>com.amazonaws</groupId>
   <name>AWS CodeDeploy Plugin for Jenkins</name>
   <description>Adds a post-build step to integrate Jenkins with AWS CodeDeploy</description>
+  <url>https://wiki.jenkins-ci.org/display/JENKINS/AWS+Codedeploy+plugin</url>
 
   <developers>
     <developer>
@@ -25,6 +26,7 @@
     <license>
       <name>Apache License, Version 2.0</name>
       <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
     </license>
   </licenses>
 
@@ -32,6 +34,7 @@
     <connection>scm:git:ssh://github.com/jenkinsci/aws-codedeploy-plugin.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/jenkinsci/aws-codedeploy-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/aws-codedeploy-plugin</url>
+    <tag>HEAD</tag>
   </scm>
 
   <repositories>
@@ -61,5 +64,14 @@
       <url>http://repo.jenkins-ci.org/public/</url>
     </pluginRepository>
   </pluginRepositories>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>2.5</version>
+      </plugin>
+    </plugins>
+  </build>
 
 </project>

@@ -48,6 +48,7 @@ import hudson.util.ListBoxModel;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -93,8 +94,9 @@ public class AWSCodeDeployPublisher extends Publisher {
     private final String proxyHost;
     private final int proxyPort;
 
-    private boolean useLongLivedCreds;
-    private boolean useTempCreds;
+    private final String awsAccessKey;
+    private final String awsSecretKey;
+    private final String credentials;
 
     private PrintStream logger;
 
@@ -108,17 +110,17 @@ public class AWSCodeDeployPublisher extends Publisher {
             String deploymentConfig,
             String region,
             JSONObject waitForCompletion,
-            String externalId,
+            String credentials,
+            String awsAccessKey,
+            String awsSecretKey,
             String iamRoleArn,
+            String externalId,
             String includes,
-            String excludes,
             String proxyHost,
             int proxyPort,
-            JSONObject tempCreds,
-            JSONObject longLivedCreds) {
+            String excludes) {
 
         this.externalId = externalId;
-        this.iamRoleArn = iamRoleArn;
         this.applicationName = applicationName;
         this.deploymentGroupName = deploymentGroupName;
         this.deploymentConfig = deploymentConfig;
@@ -127,6 +129,10 @@ public class AWSCodeDeployPublisher extends Publisher {
         this.excludes = excludes;
         this.proxyHost = proxyHost;
         this.proxyPort = proxyPort;
+        this.credentials = credentials;
+        this.awsAccessKey = awsAccessKey;
+        this.awsSecretKey = awsSecretKey;
+        this.iamRoleArn = iamRoleArn;
 
         if (waitForCompletion != null) {
             this.waitForCompletion = true;
@@ -148,7 +154,6 @@ public class AWSCodeDeployPublisher extends Publisher {
             this.pollingFreqSec = null;
         }
 
-        setCredentials(tempCreds, longLivedCreds);
 
         this.s3bucket = s3bucket;
         if (s3prefix == null || s3prefix.equals("/") || s3prefix.length() == 0) {
@@ -157,26 +162,6 @@ public class AWSCodeDeployPublisher extends Publisher {
             this.s3prefix = s3prefix;
         }
 
-    }
-
-    /**
-     * We can't simultaneously use temporary and long-lived credentials, so here we ensure that if one is set,
-     * the other isn't.
-     *
-     * @param tempCreds
-     * @param longLivedCreds
-     */
-    private void setCredentials(JSONObject tempCreds, JSONObject longLivedCreds) {
-        if (tempCreds == null) {
-            // If neither are set (the starting default when the plugin is first installed),
-            // or "use long-lived creds" is selected, then
-
-            this.useLongLivedCreds = true;
-            this.useTempCreds = false;
-        } else if (longLivedCreds == null) {
-            this.useLongLivedCreds = false;
-            this.useTempCreds = true;
-        }
     }
 
     @Override
@@ -189,13 +174,29 @@ public class AWSCodeDeployPublisher extends Publisher {
             return true;
         }
 
-        AWSClients aws = new AWSClients(
+        AWSClients aws;
+        if ("awsAccessKey".equals(credentials)) {
+            if (StringUtils.isEmpty(this.awsAccessKey) && StringUtils.isEmpty(this.awsSecretKey)) {
+                aws = AWSClients.fromDefaultCredentialChain(
+                        this.region, 
+                        this.proxyHost, 
+                        this.proxyPort);
+            } else {
+                aws = AWSClients.fromBasicCredentials(
+                        this.region,
+                        this.awsAccessKey,
+                        this.awsSecretKey,
+                        this.proxyHost,
+                        this.proxyPort);
+            }
+        } else {
+            aws = AWSClients.fromIAMRole(
                 this.region,
                 this.iamRoleArn,
                 this.getDescriptor().getExternalId(),
                 this.proxyHost,
-                this.proxyPort
-        );
+                this.proxyPort);
+        }
 
         boolean success;
 
@@ -483,7 +484,7 @@ public class AWSCodeDeployPublisher extends Publisher {
             );
 
             try {
-                AWSClients awsClients = new AWSClients(region, iamRoleArn, this.externalId, proxyHost, proxyPort);
+                AWSClients awsClients = AWSClients.fromIAMRole(region, iamRoleArn, this.externalId, proxyHost, proxyPort);
                 awsClients.testConnection(s3bucket, applicationName);
             } catch (Exception e) {
                 return FormValidation.error("Connection test failed with error: " + e.getMessage());
@@ -523,47 +524,46 @@ public class AWSCodeDeployPublisher extends Publisher {
     }
 
     public String getApplicationName() {
-
         return applicationName;
     }
 
     public String getDeploymentGroupName() {
-
         return deploymentGroupName;
     }
 
     public String getS3bucket() {
-
         return s3bucket;
     }
 
     public String getS3prefix() {
-
         return s3prefix;
     }
 
     public Long getPollingTimeoutSec() {
-
         return pollingTimeoutSec;
     }
 
     public String getIamRoleArn() {
-
         return iamRoleArn;
     }
 
-    public Long getPollingFreqSec() {
+    public String getAwsAccessKey() {
+        return awsAccessKey;
+    }
 
+    public String getAwsSecretKey() {
+        return awsSecretKey;
+    }
+
+    public Long getPollingFreqSec() {
         return pollingFreqSec;
     }
 
     public String getDeploymentConfig() {
-
         return deploymentConfig;
     }
 
     public String getExternalId() {
-
         return externalId;
     }
 
@@ -571,12 +571,8 @@ public class AWSCodeDeployPublisher extends Publisher {
         return waitForCompletion;
     }
 
-    public boolean getUseTempCreds() {
-        return useTempCreds;
-    }
-
-    public boolean getUseLongLivedCreds() {
-        return useLongLivedCreds;
+    public String getCredentials() {
+        return credentials;
     }
 
     public String getIncludes() {
