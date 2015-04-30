@@ -304,11 +304,11 @@ public class AWSCodeDeployPublisher extends Publisher {
             s3Location.setBundleType(BundleType.Zip);
             s3Location.setETag(s3result.getETag());
 
-       	    RevisionLocation revisionLocation = new RevisionLocation();
-       	    revisionLocation.setRevisionType(RevisionLocationType.S3);
-       	    revisionLocation.setS3Location(s3Location);
+            RevisionLocation revisionLocation = new RevisionLocation();
+            revisionLocation.setRevisionType(RevisionLocationType.S3);
+            revisionLocation.setS3Location(s3Location);
 
-       	    return revisionLocation;
+            return revisionLocation;
         } finally {
             zipFile.delete();
         }
