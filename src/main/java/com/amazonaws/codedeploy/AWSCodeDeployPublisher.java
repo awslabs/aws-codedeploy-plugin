@@ -1,12 +1,12 @@
 /*
  * Copyright 2014 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
  * A copy of the License is located at
- * 
+ *
  *  http://aws.amazon.com/apache2.0
- * 
+ *
  * or in the "license" file accompanying this file. This file is distributed
  * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
  * express or implied. See the License for the specific language governing
@@ -181,8 +181,8 @@ public class AWSCodeDeployPublisher extends Publisher {
         if ("awsAccessKey".equals(credentials)) {
             if (StringUtils.isEmpty(this.awsAccessKey) && StringUtils.isEmpty(this.awsSecretKey)) {
                 aws = AWSClients.fromDefaultCredentialChain(
-                        this.region, 
-                        this.proxyHost, 
+                        this.region,
+                        this.proxyHost,
                         this.proxyPort);
             } else {
                 aws = AWSClients.fromBasicCredentials(
@@ -273,40 +273,45 @@ public class AWSCodeDeployPublisher extends Publisher {
     private RevisionLocation zipAndUpload(AWSClients aws, String projectName, FilePath sourceDirectory) throws IOException,  InterruptedException {
 
         File zipFile = File.createTempFile(projectName + "-", ".zip");
-        this.logger.println("Zipping files into " + zipFile.getAbsolutePath());
-
-        sourceDirectory.zip(
-                new FileOutputStream(zipFile),
-                new DirScanner.Glob(this.includes, this.excludes)
-        );
-
         String key;
-        if (this.s3prefix.isEmpty()) {
-            key = zipFile.getName();
-        } else {
-            key = this.s3prefix;
-            if (this.s3prefix.endsWith("/")) {
-                key += zipFile.getName();
+
+        try {
+
+            this.logger.println("Zipping workspace into " + zipFile.getAbsolutePath());
+            sourceDirectory.zip(
+                    new FileOutputStream(zipFile),
+                    new DirScanner.Glob(this.includes, this.excludes)
+            );
+
+            if (this.s3prefix.isEmpty()) {
+                key = zipFile.getName();
             } else {
-                key += "/" + zipFile.getName();
+                key = this.s3prefix;
+                if (this.s3prefix.endsWith("/")) {
+                    key += zipFile.getName();
+                } else {
+                    key += "/" + zipFile.getName();
+                }
             }
+
+            logger.println("Uploading zip to s3://" + this.s3bucket + "/" + key);
+            PutObjectResult s3result = aws.s3.putObject(this.s3bucket, key, zipFile);
+
+
+            S3Location s3Location = new S3Location();
+            s3Location.setBucket(this.s3bucket);
+            s3Location.setKey(key);
+            s3Location.setBundleType(BundleType.Zip);
+            s3Location.setETag(s3result.getETag());
+
+       	    RevisionLocation revisionLocation = new RevisionLocation();
+       	    revisionLocation.setRevisionType(RevisionLocationType.S3);
+       	    revisionLocation.setS3Location(s3Location);
+
+       	    return revisionLocation;
+        } finally {
+            zipFile.delete();
         }
-
-        logger.println("Uploading zip to s3://" + this.s3bucket + "/" + key);
-        PutObjectResult s3result = aws.s3.putObject(this.s3bucket, key, zipFile);
-
-
-        S3Location s3Location = new S3Location();
-        s3Location.setBucket(this.s3bucket);
-        s3Location.setKey(key);
-        s3Location.setBundleType(BundleType.Zip);
-        s3Location.setETag(s3result.getETag());
-
-        RevisionLocation revisionLocation = new RevisionLocation();
-        revisionLocation.setRevisionType(RevisionLocationType.S3);
-        revisionLocation.setS3Location(s3Location);
-
-        return revisionLocation;
     }
 
     private void registerRevision(AWSClients aws, RevisionLocation revisionLocation) {
@@ -440,7 +445,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         }
 
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
-            // Indicates that this builder can be used with all kinds of project types 
+            // Indicates that this builder can be used with all kinds of project types
             return true;
         }
 
