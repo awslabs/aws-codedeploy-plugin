@@ -244,42 +244,47 @@ public class AWSCodeDeployPublisher extends Publisher {
     }
 
     private RevisionLocation zipAndUpload(AWSClients aws, String projectName, FilePath workspace) throws IOException,  InterruptedException {
-
+        
         File zipFile = File.createTempFile(projectName + "-", ".zip");
-        this.logger.println("Zipping workspace into " + zipFile.getAbsolutePath());
-
-        workspace.zip(
-                new FileOutputStream(zipFile),
-                new DirScanner.Glob(this.includes, this.excludes)
-        );
-
         String key;
-        if (this.s3prefix.isEmpty()) {
-            key = zipFile.getName();
-        } else {
-            key = this.s3prefix;
-            if (this.s3prefix.endsWith("/")) {
-                key += zipFile.getName();
+        
+        try {
+
+            this.logger.println("Zipping workspace into " + zipFile.getAbsolutePath());
+            workspace.zip(
+                    new FileOutputStream(zipFile),
+                    new DirScanner.Glob(this.includes, this.excludes)
+            );
+
+            if (this.s3prefix.isEmpty()) {
+                key = zipFile.getName();
             } else {
-                key += "/" + zipFile.getName();
+                key = this.s3prefix;
+                if (this.s3prefix.endsWith("/")) {
+                    key += zipFile.getName();
+                } else {
+                    key += "/" + zipFile.getName();
+                }
             }
+
+            logger.println("Uploading zip to s3://" + this.s3bucket + "/" + key);
+            PutObjectResult s3result = aws.s3.putObject(this.s3bucket, key, zipFile);
+
+
+            S3Location s3Location = new S3Location();
+            s3Location.setBucket(this.s3bucket);
+            s3Location.setKey(key);
+            s3Location.setBundleType(BundleType.Zip);
+            s3Location.setETag(s3result.getETag());
+
+       	    RevisionLocation revisionLocation = new RevisionLocation();
+       	    revisionLocation.setRevisionType(RevisionLocationType.S3);
+       	    revisionLocation.setS3Location(s3Location);
+
+       	    return revisionLocation;
+        } finally {
+            zipFile.delete();
         }
-
-        logger.println("Uploading zip to s3://" + this.s3bucket + "/" + key);
-        PutObjectResult s3result = aws.s3.putObject(this.s3bucket, key, zipFile);
-
-
-        S3Location s3Location = new S3Location();
-        s3Location.setBucket(this.s3bucket);
-        s3Location.setKey(key);
-        s3Location.setBundleType(BundleType.Zip);
-        s3Location.setETag(s3result.getETag());
-
-        RevisionLocation revisionLocation = new RevisionLocation();
-        revisionLocation.setRevisionType(RevisionLocationType.S3);
-        revisionLocation.setS3Location(s3Location);
-
-        return revisionLocation;
     }
 
     private void registerRevision(AWSClients aws, RevisionLocation revisionLocation) {
