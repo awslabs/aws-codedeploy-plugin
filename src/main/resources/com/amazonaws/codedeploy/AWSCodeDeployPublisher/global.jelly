@@ -6,17 +6,17 @@
         instance.
       </f:description>
 
-      <f:entry title="AWS Access Key" name="codedeploy" help="/plugin/codedeploy/help-awsAccessKey.html">
-        <f:textbox field="awsAccessKey" />
+      <f:entry title="AWS Access Key" field="awsAccessKey">
+        <f:textbox />
       </f:entry>
-      <f:entry title="AWS Secret Key" name="codedeploy" help="/plugin/codedeploy/help-awsSecretKey.html">
-        <f:password field="awsSecretKey" />
+      <f:entry title="AWS Secret Key" field="awsSecretKey">
+        <f:password/>
       </f:entry>
-	  <f:entry title="Proxy Host" name="codedeploy" help="/plugin/codedeploy/help-proxyHost.html">
-        <f:textbox default="" field="proxyHost" />
+      <f:entry title="Proxy Host" field="proxyHost">
+        <f:textbox default="" />
       </f:entry>
-      <f:entry title="Proxy Port" name="codedeploy" help="/plugin/codedeploy/help-proxyPort.html">
-        <f:textbox default="" field="proxyPort" />
+      <f:entry title="Proxy Port" field="proxyPort">
+        <f:textbox default="" />
       </f:entry>
   </f:section>
 </j:jelly>
