@@ -91,6 +91,7 @@ public class AWSCodeDeployPublisher extends Publisher {
     private final String region;
     private final String includes;
     private final String excludes;
+    private final String subdirectory;
     private final String proxyHost;
     private final int proxyPort;
 
@@ -118,7 +119,8 @@ public class AWSCodeDeployPublisher extends Publisher {
             String includes,
             String proxyHost,
             int proxyPort,
-            String excludes) {
+            String excludes,
+            String subdirectory) {
 
         this.externalId = externalId;
         this.applicationName = applicationName;
@@ -127,6 +129,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         this.region = region;
         this.includes = includes;
         this.excludes = excludes;
+        this.subdirectory = subdirectory;
         this.proxyHost = proxyHost;
         this.proxyPort = proxyPort;
         this.credentials = credentials;
@@ -205,7 +208,7 @@ public class AWSCodeDeployPublisher extends Publisher {
             verifyCodeDeployApplication(aws);
 
             String projectName = build.getProject().getName();
-            RevisionLocation revisionLocation = zipAndUpload(aws, projectName, build.getWorkspace());
+            RevisionLocation revisionLocation = zipAndUpload(aws, projectName, getSourceDirectory(build.getWorkspace()));
 
             registerRevision(aws, revisionLocation);
             String deploymentId = createDeployment(aws, revisionLocation);
@@ -222,6 +225,30 @@ public class AWSCodeDeployPublisher extends Publisher {
         }
 
         return success;
+    }
+
+    private FilePath getSourceDirectory(FilePath basePath) throws IOException, InterruptedException {
+        String subdirectory = this.subdirectory.trim().length() > 0 ? this.subdirectory.trim() : "";
+        if (!subdirectory.isEmpty() && !subdirectory.startsWith("/")) {
+            subdirectory = "/" + subdirectory;
+        }
+        FilePath sourcePath = basePath.withSuffix(subdirectory).absolutize();
+        File sourceDirectory = new File(sourcePath.getRemote());
+        if (!sourceDirectory.isDirectory() || !isSubDirectory(basePath, sourcePath)) {
+            throw new IllegalArgumentException("Provided path is not a subdirectory of the workspace: " + sourcePath );
+        }
+        return sourcePath;
+    }
+
+    private boolean isSubDirectory(FilePath parent, FilePath child) {
+        FilePath parentFolder = child;
+        while (parentFolder!=null) {
+            if (parent.equals(parentFolder)) {
+                return true;
+            }
+            parentFolder = child.getParent();
+        }
+        return false;
     }
 
     private void verifyCodeDeployApplication(AWSClients aws) throws IllegalArgumentException {
@@ -243,12 +270,12 @@ public class AWSCodeDeployPublisher extends Publisher {
         }
     }
 
-    private RevisionLocation zipAndUpload(AWSClients aws, String projectName, FilePath workspace) throws IOException,  InterruptedException {
+    private RevisionLocation zipAndUpload(AWSClients aws, String projectName, FilePath sourceDirectory) throws IOException,  InterruptedException {
 
         File zipFile = File.createTempFile(projectName + "-", ".zip");
-        this.logger.println("Zipping workspace into " + zipFile.getAbsolutePath());
+        this.logger.println("Zipping files into " + zipFile.getAbsolutePath());
 
-        workspace.zip(
+        sourceDirectory.zip(
                 new FileOutputStream(zipFile),
                 new DirScanner.Glob(this.includes, this.excludes)
         );
@@ -581,6 +608,10 @@ public class AWSCodeDeployPublisher extends Publisher {
 
     public String getExcludes() {
         return excludes;
+    }
+
+    public String getSubdirectory() {
+        return subdirectory;
     }
 
     public String getRegion() {

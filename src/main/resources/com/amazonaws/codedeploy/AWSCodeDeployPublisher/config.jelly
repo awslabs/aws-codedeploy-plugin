@@ -17,6 +17,9 @@
   <f:entry title="S3 Prefix" field="s3prefix">
     <f:textbox default="/" />
   </f:entry>
+  <f:entry title="Subdirectory" field="subdirectory">
+    <f:textbox default="" />
+  </f:entry>
   <f:entry title="Include Files" field="includes">
     <f:textbox default="**" />
   </f:entry>
