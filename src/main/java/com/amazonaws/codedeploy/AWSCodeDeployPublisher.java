@@ -276,8 +276,8 @@ public class AWSCodeDeployPublisher extends Publisher {
         String key;
 
         try {
+            this.logger.println("Zipping files into " + zipFile.getAbsolutePath());
 
-            this.logger.println("Zipping workspace into " + zipFile.getAbsolutePath());
             sourceDirectory.zip(
                     new FileOutputStream(zipFile),
                     new DirScanner.Glob(this.includes, this.excludes)
