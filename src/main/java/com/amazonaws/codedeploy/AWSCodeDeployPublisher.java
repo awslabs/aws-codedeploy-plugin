@@ -34,6 +34,7 @@ import com.amazonaws.services.codedeploy.model.S3Location;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Extension;
+import hudson.Util;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
 import hudson.model.AbstractProject;
@@ -58,6 +59,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Date;
+import java.util.Map;
 import java.util.UUID;
 
 import javax.servlet.ServletException;
@@ -165,7 +167,7 @@ public class AWSCodeDeployPublisher extends Publisher {
     }
 
     @Override
-    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
+    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
 
         this.logger = listener.getLogger();
         final boolean buildFailed = build.getResult() == Result.FAILURE;
@@ -205,7 +207,7 @@ public class AWSCodeDeployPublisher extends Publisher {
             verifyCodeDeployApplication(aws);
 
             String projectName = build.getProject().getName();
-            RevisionLocation revisionLocation = zipAndUpload(aws, projectName, build.getWorkspace());
+            RevisionLocation revisionLocation = zipAndUpload(aws, projectName, build.getWorkspace(), build.getEnvironment(listener));
 
             registerRevision(aws, revisionLocation);
             String deploymentId = createDeployment(aws, revisionLocation);
@@ -243,7 +245,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         }
     }
 
-    private RevisionLocation zipAndUpload(AWSClients aws, String projectName, FilePath workspace) throws IOException,  InterruptedException {
+    private RevisionLocation zipAndUpload(AWSClients aws, String projectName, FilePath workspace, Map<String, String> envVars) throws IOException,  InterruptedException {
 
         File zipFile = File.createTempFile(projectName + "-", ".zip");
         this.logger.println("Zipping workspace into " + zipFile.getAbsolutePath());
@@ -257,7 +259,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         if (this.s3prefix.isEmpty()) {
             key = zipFile.getName();
         } else {
-            key = this.s3prefix;
+            key = Util.replaceMacro(this.s3prefix, envVars);
             if (this.s3prefix.endsWith("/")) {
                 key += zipFile.getName();
             } else {
