@@ -76,7 +76,7 @@ public class AWSCodeDeployPublisher extends Publisher {
     public static final long      DEFAULT_TIMEOUT_SECONDS           = 900;
     public static final long      DEFAULT_POLLING_FREQUENCY_SECONDS = 15;
     public static final String    ROLE_SESSION_NAME                 = "jenkins-codedeploy-plugin";
-    public static final Regions[] AVAILABLE_REGIONS                 = {Regions.US_EAST_1, Regions.US_WEST_2};
+    public static final Regions[] AVAILABLE_REGIONS                 = {Regions.US_EAST_1, Regions.US_WEST_2, Regions.AP_SOUTHEAST_2};
 
     private final String  s3bucket;
     private final String  s3prefix;
