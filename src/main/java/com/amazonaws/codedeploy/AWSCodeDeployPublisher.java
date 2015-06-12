@@ -73,8 +73,6 @@ import javax.servlet.ServletException;
  * credentials to be configured for each project.
  */
 public class AWSCodeDeployPublisher extends Publisher {
-    public static final String    POLLING_TIMEOUT_KEY               = "pollingTimeoutSec";
-    public static final String    POLLING_FREQ_KEY                  = "pollingFreqSec";
     public static final long      DEFAULT_TIMEOUT_SECONDS           = 900;
     public static final long      DEFAULT_POLLING_FREQUENCY_SECONDS = 15;
     public static final String    ROLE_SESSION_NAME                 = "jenkins-codedeploy-plugin";
@@ -112,7 +110,9 @@ public class AWSCodeDeployPublisher extends Publisher {
             String deploymentGroupName,
             String deploymentConfig,
             String region,
-            JSONObject waitForCompletion,
+            Boolean waitForCompletion,
+            Long pollingTimeoutSec,
+            Long pollingFreqSec,
             String credentials,
             String awsAccessKey,
             String awsSecretKey,
@@ -127,7 +127,11 @@ public class AWSCodeDeployPublisher extends Publisher {
         this.externalId = externalId;
         this.applicationName = applicationName;
         this.deploymentGroupName = deploymentGroupName;
-        this.deploymentConfig = deploymentConfig;
+        if (deploymentConfig != null && deploymentConfig.length() == 0) {
+            this.deploymentConfig = null;
+        } else {
+            this.deploymentConfig = deploymentConfig;
+        }
         this.region = region;
         this.includes = includes;
         this.excludes = excludes;
@@ -139,19 +143,17 @@ public class AWSCodeDeployPublisher extends Publisher {
         this.awsSecretKey = awsSecretKey;
         this.iamRoleArn = iamRoleArn;
 
-        if (waitForCompletion != null) {
-            this.waitForCompletion = true;
-
-            if (waitForCompletion.containsKey(POLLING_TIMEOUT_KEY)) {
-                this.pollingTimeoutSec = waitForCompletion.getLong(POLLING_TIMEOUT_KEY);
-            } else {
+        if (waitForCompletion != null && waitForCompletion) {
+            this.waitForCompletion = waitForCompletion;
+            if (pollingTimeoutSec == null) {
                 this.pollingTimeoutSec = DEFAULT_TIMEOUT_SECONDS;
-            }
-
-            if (waitForCompletion.containsKey(POLLING_FREQ_KEY)) {
-                this.pollingFreqSec = waitForCompletion.getLong(POLLING_FREQ_KEY);
             } else {
+                this.pollingTimeoutSec = pollingTimeoutSec;
+            }
+            if (pollingFreqSec == null) {
                 this.pollingFreqSec = DEFAULT_POLLING_FREQUENCY_SECONDS;
+            } else {
+                this.pollingFreqSec = pollingFreqSec;
             }
         } else {
             this.waitForCompletion = false;
