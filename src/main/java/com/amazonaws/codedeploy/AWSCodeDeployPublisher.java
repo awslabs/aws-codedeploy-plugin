@@ -250,7 +250,7 @@ public class AWSCodeDeployPublisher extends Publisher {
             if (parent.equals(parentFolder)) {
                 return true;
             }
-            parentFolder = child.getParent();
+            parentFolder = parentFolder.getParent();
         }
         return false;
     }
