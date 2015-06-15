@@ -15,7 +15,10 @@
     <f:textbox />
   </f:entry>
   <f:entry title="S3 Prefix" field="s3prefix">
-    <f:textbox default="/" />
+    <f:textbox default="" />
+  </f:entry>
+  <f:entry title="Subdirectory" field="subdirectory">
+    <f:textbox default="" />
   </f:entry>
   <f:entry title="Include Files" field="includes">
     <f:textbox default="**" />
@@ -30,11 +33,11 @@
     <f:textbox default="" />
   </f:entry>
 
-  <f:optionalBlock title="Wait for deployment to finish?" field="waitForCompletion"  checked="${instance.getWaitForCompletion()}">
-    <f:entry title="Polling Timeout (s)" field="pollingTimeout">
+  <f:optionalBlock title="Wait for deployment to finish?" field="waitForCompletion"  checked="${instance.getWaitForCompletion()}" inline="true">
+    <f:entry title="Polling Timeout (s)" field="pollingTimeoutSec">
       <f:textbox default="300"/>
     </f:entry>
-    <f:entry title="Polling Frequency (s)" field="pollingFreq">
+    <f:entry title="Polling Frequency (s)" field="pollingFreqSec">
       <f:textbox default="15"/>
     </f:entry>
   </f:optionalBlock>
