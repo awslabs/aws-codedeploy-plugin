@@ -232,14 +232,14 @@ public class AWSCodeDeployPublisher extends Publisher {
     }
 
     private FilePath getSourceDirectory(FilePath basePath) throws IOException, InterruptedException {
-        String subdirectory = this.subdirectory.trim().length() > 0 ? this.subdirectory.trim() : "";
+        String subdirectory = StringUtils.trimToEmpty(this.subdirectory);
         if (!subdirectory.isEmpty() && !subdirectory.startsWith("/")) {
             subdirectory = "/" + subdirectory;
         }
         FilePath sourcePath = basePath.withSuffix(subdirectory).absolutize();
-        File sourceDirectory = new File(sourcePath.getRemote());
-        if (!sourceDirectory.isDirectory() || !isSubDirectory(basePath, sourcePath)) {
-            throw new IllegalArgumentException("Provided path is not a subdirectory of the workspace: " + sourcePath );
+        if (!sourcePath.isDirectory() || !isSubDirectory(basePath, sourcePath)) {
+            throw new IllegalArgumentException("Provided path (resolved as '" + sourcePath
+                    +"') is not a subdirectory of the workspace (resolved as '" + basePath + "')");
         }
         return sourcePath;
     }
