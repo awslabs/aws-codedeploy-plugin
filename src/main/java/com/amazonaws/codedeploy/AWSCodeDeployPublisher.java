@@ -77,7 +77,7 @@ public class AWSCodeDeployPublisher extends Publisher {
     public static final long      DEFAULT_TIMEOUT_SECONDS           = 900;
     public static final long      DEFAULT_POLLING_FREQUENCY_SECONDS = 15;
     public static final String    ROLE_SESSION_NAME                 = "jenkins-codedeploy-plugin";
-    public static final Regions[] AVAILABLE_REGIONS                 = {Regions.AP_SOUTHEAST_2, Regions.EU_WEST_1, Regions.US_EAST_1, Regions.US_WEST_2};
+    public static final Regions[] AVAILABLE_REGIONS                 = {Regions.AP_NORTHEAST_1, Regions.AP_SOUTHEAST_2, Regions.EU_WEST_1, Regions.US_EAST_1, Regions.US_WEST_2};
 
     private final String  s3bucket;
     private final String  s3prefix;
@@ -236,14 +236,14 @@ public class AWSCodeDeployPublisher extends Publisher {
     }
 
     private FilePath getSourceDirectory(FilePath basePath) throws IOException, InterruptedException {
-        String subdirectory = this.subdirectory.trim().length() > 0 ? this.subdirectory.trim() : "";
+        String subdirectory = StringUtils.trimToEmpty(this.subdirectory);
         if (!subdirectory.isEmpty() && !subdirectory.startsWith("/")) {
             subdirectory = "/" + subdirectory;
         }
         FilePath sourcePath = basePath.withSuffix(subdirectory).absolutize();
-        File sourceDirectory = new File(sourcePath.getRemote());
-        if (!sourceDirectory.isDirectory() || !isSubDirectory(basePath, sourcePath)) {
-            throw new IllegalArgumentException("Provided path is not a subdirectory of the workspace: " + sourcePath );
+        if (!sourcePath.isDirectory() || !isSubDirectory(basePath, sourcePath)) {
+            throw new IllegalArgumentException("Provided path (resolved as '" + sourcePath
+                    +"') is not a subdirectory of the workspace (resolved as '" + basePath + "')");
         }
         return sourcePath;
     }
@@ -408,7 +408,9 @@ public class AWSCodeDeployPublisher extends Publisher {
 
             Thread.sleep(pollingFreqMillis);
         }
-
+        
+        logger.println("Deployment status: " + deployStatus.getStatus() + "; instances: " + deployStatus.getDeploymentOverview());
+        
         if (!deployStatus.getStatus().equals(DeploymentStatus.Succeeded.toString())) {
             this.logger.println("Deployment did not succeed. Final status: " + deployStatus.getStatus());
             success = false;
