@@ -81,7 +81,7 @@ public class AWSCodeDeployPublisher extends Publisher {
     private final String  s3bucket;
     private final String  s3prefix;
     private final String  applicationName;
-    private final String  deploymentGroupName; // TODO allow for deployment to multiple groups
+    private       String  deploymentGroupName; // TODO allow for deployment to multiple groups
     private final String  deploymentConfig;
     private final Long    pollingTimeoutSec;
     private final Long    pollingFreqSec;
@@ -209,10 +209,13 @@ public class AWSCodeDeployPublisher extends Publisher {
 
         try {
 
+            Map<String, String> envVars = build.getEnvironment(listener);
+            this.deploymentGroupName = Util.replaceMacro(this.deploymentGroupName, envVars);
+
             verifyCodeDeployApplication(aws);
 
             String projectName = build.getProject().getName();
-            RevisionLocation revisionLocation = zipAndUpload(aws, projectName, getSourceDirectory(build.getWorkspace()), build.getEnvironment(listener));
+            RevisionLocation revisionLocation = zipAndUpload(aws, projectName, getSourceDirectory(build.getWorkspace()), envVars);
 
             registerRevision(aws, revisionLocation);
             String deploymentId = createDeployment(aws, revisionLocation);
