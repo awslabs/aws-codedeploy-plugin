@@ -50,6 +50,7 @@ import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.io.FileUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -76,15 +77,16 @@ public class AWSCodeDeployPublisher extends Publisher {
     public static final long      DEFAULT_TIMEOUT_SECONDS           = 900;
     public static final long      DEFAULT_POLLING_FREQUENCY_SECONDS = 15;
     public static final String    ROLE_SESSION_NAME                 = "jenkins-codedeploy-plugin";
-    public static final Regions[] AVAILABLE_REGIONS                 = {Regions.AP_NORTHEAST_1, Regions.AP_SOUTHEAST_2, Regions.EU_WEST_1, Regions.US_EAST_1, Regions.US_WEST_2};
+    public static final Regions[] AVAILABLE_REGIONS                 = {Regions.AP_NORTHEAST_1, Regions.AP_SOUTHEAST_2, Regions.EU_WEST_1, Regions.US_EAST_1, Regions.US_WEST_2, Regions.EU_CENTRAL_1};
 
     private final String  s3bucket;
     private final String  s3prefix;
     private final String  applicationName;
-    private final String  deploymentGroupName; // TODO allow for deployment to multiple groups
+    private       String  deploymentGroupName; // TODO allow for deployment to multiple groups
     private final String  deploymentConfig;
     private final Long    pollingTimeoutSec;
     private final Long    pollingFreqSec;
+    private final boolean deploymentGroupAppspec;
     private final boolean waitForCompletion;
     private final String  externalId;
     private final String  iamRoleArn;
@@ -110,6 +112,7 @@ public class AWSCodeDeployPublisher extends Publisher {
             String deploymentGroupName,
             String deploymentConfig,
             String region,
+            Boolean deploymentGroupAppspec,
             Boolean waitForCompletion,
             Long pollingTimeoutSec,
             Long pollingFreqSec,
@@ -142,6 +145,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         this.awsAccessKey = awsAccessKey;
         this.awsSecretKey = awsSecretKey;
         this.iamRoleArn = iamRoleArn;
+        this.deploymentGroupAppspec = deploymentGroupAppspec;
 
         if (waitForCompletion != null && waitForCompletion) {
             this.waitForCompletion = waitForCompletion;
@@ -209,10 +213,13 @@ public class AWSCodeDeployPublisher extends Publisher {
 
         try {
 
+            Map<String, String> envVars = build.getEnvironment(listener);
+            this.deploymentGroupName = Util.replaceMacro(this.deploymentGroupName, envVars);
+
             verifyCodeDeployApplication(aws);
 
             String projectName = build.getProject().getName();
-            RevisionLocation revisionLocation = zipAndUpload(aws, projectName, getSourceDirectory(build.getWorkspace()), build.getEnvironment(listener));
+            RevisionLocation revisionLocation = zipAndUpload(aws, projectName, getSourceDirectory(build.getWorkspace()), envVars);
 
             registerRevision(aws, revisionLocation);
             String deploymentId = createDeployment(aws, revisionLocation);
@@ -274,13 +281,29 @@ public class AWSCodeDeployPublisher extends Publisher {
         }
     }
 
-    private RevisionLocation zipAndUpload(AWSClients aws, String projectName, FilePath sourceDirectory, Map<String, String> envVars) throws IOException,  InterruptedException {
+    private RevisionLocation zipAndUpload(AWSClients aws, String projectName, FilePath sourceDirectory, Map<String, String> envVars) throws IOException, InterruptedException, IllegalArgumentException {
 
         File zipFile = File.createTempFile(projectName + "-", ".zip");
         String key;
-
+        File appspec;
+        File dest;
         try {
-            this.logger.println("Zipping files into " + zipFile.getAbsolutePath());
+            if (this.deploymentGroupAppspec) {
+                appspec = new File(sourceDirectory + "/appspec." + this.deploymentGroupName + ".yml");
+                if (appspec.exists()) {
+                    dest = new File(sourceDirectory + "/appspec.yml");
+                    FileUtils.copyFile(appspec, dest);
+                    logger.println("Use appspec." + this.deploymentGroupName + ".yml");
+                }
+                if (!appspec.exists()) {
+                    throw new IllegalArgumentException("/appspec." + this.deploymentGroupName + ".yml file does not exist" );
+                }
+
+            }
+
+            logger.println("Zipping files into " + zipFile.getAbsolutePath());
+
+
 
             sourceDirectory.zip(
                     new FileOutputStream(zipFile),
@@ -606,6 +629,10 @@ public class AWSCodeDeployPublisher extends Publisher {
 
     public boolean getWaitForCompletion() {
         return waitForCompletion;
+    }
+
+    public boolean getDeploymentGroupAppspec() {
+        return deploymentGroupAppspec;
     }
 
     public String getCredentials() {
