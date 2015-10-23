@@ -82,7 +82,7 @@ public class AWSCodeDeployPublisher extends Publisher {
     private final String  s3bucket;
     private final String  s3prefix;
     private final String  applicationName;
-    private       String  deploymentGroupName; // TODO allow for deployment to multiple groups
+    private final String  deploymentGroupName; // TODO allow for deployment to multiple groups
     private final String  deploymentConfig;
     private final Long    pollingTimeoutSec;
     private final Long    pollingFreqSec;
@@ -214,15 +214,15 @@ public class AWSCodeDeployPublisher extends Publisher {
         try {
 
             Map<String, String> envVars = build.getEnvironment(listener);
-            this.deploymentGroupName = Util.replaceMacro(this.deploymentGroupName, envVars);
+            String deploymentGroupName = Util.replaceMacro(this.deploymentGroupName, envVars);
 
-            verifyCodeDeployApplication(aws);
+            verifyCodeDeployApplication(aws, deploymentGroupName);
 
             String projectName = build.getProject().getName();
-            RevisionLocation revisionLocation = zipAndUpload(aws, projectName, getSourceDirectory(build.getWorkspace()), envVars);
+            RevisionLocation revisionLocation = zipAndUpload(aws, projectName, getSourceDirectory(build.getWorkspace()), envVars, deploymentGroupName);
 
             registerRevision(aws, revisionLocation);
-            String deploymentId = createDeployment(aws, revisionLocation);
+            String deploymentId = createDeployment(aws, revisionLocation, deploymentGroupName);
 
             success = waitForDeployment(aws, deploymentId);
 
@@ -262,7 +262,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         return false;
     }
 
-    private void verifyCodeDeployApplication(AWSClients aws) throws IllegalArgumentException {
+    private void verifyCodeDeployApplication(AWSClients aws, String deploymentGroupName) throws IllegalArgumentException {
         // Check that the application exists
         ListApplicationsResult applications = aws.codedeploy.listApplications();
 
@@ -276,12 +276,12 @@ public class AWSCodeDeployPublisher extends Publisher {
                         .withApplicationName(this.applicationName)
         );
 
-        if (!deploymentGroups.getDeploymentGroups().contains(this.deploymentGroupName)) {
-            throw new IllegalArgumentException("Cannot find deployment group named '" + this.deploymentGroupName + "'");
+        if (!deploymentGroups.getDeploymentGroups().contains(deploymentGroupName)) {
+            throw new IllegalArgumentException("Cannot find deployment group named '" + deploymentGroupName + "'");
         }
     }
 
-    private RevisionLocation zipAndUpload(AWSClients aws, String projectName, FilePath sourceDirectory, Map<String, String> envVars) throws IOException, InterruptedException, IllegalArgumentException {
+    private RevisionLocation zipAndUpload(AWSClients aws, String projectName, FilePath sourceDirectory, Map<String, String> envVars, String deploymentGroupName) throws IOException, InterruptedException, IllegalArgumentException {
 
         File zipFile = File.createTempFile(projectName + "-", ".zip");
         String key;
@@ -289,14 +289,14 @@ public class AWSCodeDeployPublisher extends Publisher {
         File dest;
         try {
             if (this.deploymentGroupAppspec) {
-                appspec = new File(sourceDirectory + "/appspec." + this.deploymentGroupName + ".yml");
+                appspec = new File(sourceDirectory + "/appspec." + deploymentGroupName + ".yml");
                 if (appspec.exists()) {
                     dest = new File(sourceDirectory + "/appspec.yml");
                     FileUtils.copyFile(appspec, dest);
-                    logger.println("Use appspec." + this.deploymentGroupName + ".yml");
+                    logger.println("Use appspec." + deploymentGroupName + ".yml");
                 }
                 if (!appspec.exists()) {
-                    throw new IllegalArgumentException("/appspec." + this.deploymentGroupName + ".yml file does not exist" );
+                    throw new IllegalArgumentException("/appspec." + deploymentGroupName + ".yml file does not exist" );
                 }
 
             }
@@ -352,14 +352,14 @@ public class AWSCodeDeployPublisher extends Publisher {
         );
     }
 
-    private String createDeployment(AWSClients aws, RevisionLocation revisionLocation) throws Exception {
+    private String createDeployment(AWSClients aws, RevisionLocation revisionLocation, String deploymentGroupName) throws Exception {
 
         this.logger.println("Creating deployment with revision at " + revisionLocation);
 
         CreateDeploymentResult createDeploymentResult = aws.codedeploy.createDeployment(
                 new CreateDeploymentRequest()
                         .withDeploymentConfigName(this.deploymentConfig)
-                        .withDeploymentGroupName(this.deploymentGroupName)
+                        .withDeploymentGroupName(deploymentGroupName)
                         .withApplicationName(this.applicationName)
                         .withRevision(revisionLocation)
                         .withDescription("Deployment created by Jenkins")
