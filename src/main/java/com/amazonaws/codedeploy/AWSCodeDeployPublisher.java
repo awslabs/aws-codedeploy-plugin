@@ -225,7 +225,7 @@ public class AWSCodeDeployPublisher extends Publisher {
             RevisionLocation revisionLocation = zipAndUpload(aws, projectName, getSourceDirectory(build.getWorkspace()), envVars, deploymentGroupName);
 
             registerRevision(aws, revisionLocation);
-            String deploymentId = createDeployment(aws, revisionLocation, deploymentGroupName);
+            deploymentId = createDeployment(aws, revisionLocation, deploymentGroupName);
 
             success = waitForDeployment(aws, deploymentId);
 
