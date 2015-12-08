@@ -30,6 +30,8 @@ import com.amazonaws.services.codedeploy.model.DeploymentStatus;
 import com.amazonaws.services.codedeploy.model.GetDeploymentRequest;
 import com.amazonaws.services.codedeploy.model.RegisterApplicationRevisionRequest;
 import com.amazonaws.services.codedeploy.model.S3Location;
+import com.amazonaws.services.codedeploy.model.StopDeploymentRequest;
+import com.amazonaws.services.codedeploy.model.StopDeploymentResult;
 
 import hudson.FilePath;
 import hudson.Launcher;
@@ -210,6 +212,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         }
 
         boolean success;
+	String deploymentId = null;
 
         try {
 
@@ -222,10 +225,21 @@ public class AWSCodeDeployPublisher extends Publisher {
             RevisionLocation revisionLocation = zipAndUpload(aws, projectName, getSourceDirectory(build.getWorkspace()), envVars, deploymentGroupName);
 
             registerRevision(aws, revisionLocation);
-            String deploymentId = createDeployment(aws, revisionLocation, deploymentGroupName);
+            deploymentId = createDeployment(aws, revisionLocation, deploymentGroupName);
 
             success = waitForDeployment(aws, deploymentId);
 
+        } catch (InterruptedException e) {
+
+            this.logger.println("User cancelling CodeDeploy job");
+	    try {
+	      this.logger.println(stopDeployment(aws, deploymentId));
+	    } catch (Exception ex) {
+                this.logger.println(e.getMessage());
+		e.printStackTrace(this.logger);
+	    }
+	    success = false;
+	    
         } catch (Exception e) {
 
             this.logger.println("Failed CodeDeploy post-build step; exception follows.");
@@ -366,6 +380,18 @@ public class AWSCodeDeployPublisher extends Publisher {
         );
 
         return createDeploymentResult.getDeploymentId();
+    }
+
+    private String stopDeployment(AWSClients aws, String deploymentId) throws Exception {
+
+        this.logger.println("Stopping deployment " + deploymentId);
+
+        StopDeploymentResult stopDeploymentResult = aws.codedeploy.stopDeployment(
+                new StopDeploymentRequest()
+                        .withDeploymentId(deploymentId)
+        );
+
+        return stopDeploymentResult.getStatus();
     }
 
     private boolean waitForDeployment(AWSClients aws, String deploymentId) throws InterruptedException {
