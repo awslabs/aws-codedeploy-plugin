@@ -52,7 +52,7 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.amazonaws</groupId>
+      <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>aws-java-sdk</artifactId>
       <version>1.10.26</version>
     </dependency>
