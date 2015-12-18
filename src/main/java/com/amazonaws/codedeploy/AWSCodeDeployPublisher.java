@@ -289,6 +289,10 @@ public class AWSCodeDeployPublisher extends Publisher {
         String prefix = getS3PrefixFromEnv();
         String bucket = getS3BucketFromEnv();
 
+        if(bucket.indexOf("/") > 0){
+            throw new IllegalArgumentException("S3 Bucket field cannot contain any subdirectories.  Bucket name only!");
+        }
+
         try {
             if (this.deploymentGroupAppspec) {
                 appspec = new File(sourceDirectory + "/appspec." + deploymentGroupName + ".yml");
