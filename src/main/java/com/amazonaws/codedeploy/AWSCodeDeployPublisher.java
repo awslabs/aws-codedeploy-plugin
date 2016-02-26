@@ -87,7 +87,6 @@ public class AWSCodeDeployPublisher extends Publisher {
     private final Long    pollingTimeoutSec;
     private final Long    pollingFreqSec;
     private final boolean deploymentGroupAppspec;
-    private final boolean onlyRevision;
     private final boolean waitForCompletion;
     private final String  externalId;
     private final String  iamRoleArn;
@@ -101,6 +100,7 @@ public class AWSCodeDeployPublisher extends Publisher {
     private final String awsAccessKey;
     private final String awsSecretKey;
     private final String credentials;
+    private final String deploymentMethod;
 
     private PrintStream logger;
     private Map <String, String> envVars;
@@ -114,11 +114,11 @@ public class AWSCodeDeployPublisher extends Publisher {
             String deploymentConfig,
             String region,
             Boolean deploymentGroupAppspec,
-            Boolean onlyRevision,
             Boolean waitForCompletion,
             Long pollingTimeoutSec,
             Long pollingFreqSec,
             String credentials,
+            String deploymentMethod,
             String awsAccessKey,
             String awsSecretKey,
             String iamRoleArn,
@@ -144,16 +144,11 @@ public class AWSCodeDeployPublisher extends Publisher {
         this.proxyHost = proxyHost;
         this.proxyPort = proxyPort;
         this.credentials = credentials;
+        this.deploymentMethod = deploymentMethod;
         this.awsAccessKey = awsAccessKey;
         this.awsSecretKey = awsSecretKey;
         this.iamRoleArn = iamRoleArn;
         this.deploymentGroupAppspec = deploymentGroupAppspec;
-
-        if (onlyRevision != null && onlyRevision) {
-          this.onlyRevision = onlyRevision;
-        } else {
-          this.onlyRevision = false;
-        }
 
         if (waitForCompletion != null && waitForCompletion) {
             this.waitForCompletion = waitForCompletion;
@@ -225,7 +220,7 @@ public class AWSCodeDeployPublisher extends Publisher {
             RevisionLocation revisionLocation = zipAndUpload(aws, projectName, getSourceDirectory(build.getWorkspace()));
 
             registerRevision(aws, revisionLocation);
-            if (this.onlyRevision){
+            if ("onlyRevision".equals(deploymentMethod)){
               success = true;
             } else {
 
@@ -646,8 +641,8 @@ public class AWSCodeDeployPublisher extends Publisher {
         return externalId;
     }
 
-    public boolean getOnlyRevision() {
-        return onlyRevision;
+    public String getDeploymentMethod() {
+        return deploymentMethod;
     }
 
     public boolean getWaitForCompletion() {
