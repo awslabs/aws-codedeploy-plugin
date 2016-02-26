@@ -45,7 +45,7 @@
 
     <f:radioBlock title="Deploy" name="deploymentMethod" value="deploy" checked="${instance.getDeploymentMethod() == 'deploy'}" inline="true">
       <f:description>
-        If it's selected, the plugin will only generate the revision and will deploy.
+        If it's selected, the plugin will generate the revision and will deploy.
       </f:description>
       <f:optionalBlock title="Wait for deployment to finish?" field="waitForCompletion" checked="${instance.getWaitForCompletion()}" inline="true">
         <f:entry title="Polling Timeout (s)" field="pollingTimeoutSec">
