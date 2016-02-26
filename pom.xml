@@ -7,7 +7,7 @@
   </parent>
 
   <artifactId>codedeploy</artifactId>
-  <version>1.10-WSPI</version>
+  <version>1.11</version>
   <packaging>hpi</packaging>
   <groupId>com.amazonaws</groupId>
   <name>AWS CodeDeploy Plugin for Jenkins</name>
