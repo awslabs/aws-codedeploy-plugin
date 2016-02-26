@@ -87,6 +87,7 @@ public class AWSCodeDeployPublisher extends Publisher {
     private final Long    pollingTimeoutSec;
     private final Long    pollingFreqSec;
     private final boolean deploymentGroupAppspec;
+    private final boolean onlyRevision;
     private final boolean waitForCompletion;
     private final String  externalId;
     private final String  iamRoleArn;
@@ -113,6 +114,7 @@ public class AWSCodeDeployPublisher extends Publisher {
             String deploymentConfig,
             String region,
             Boolean deploymentGroupAppspec,
+            Boolean onlyRevision,
             Boolean waitForCompletion,
             Long pollingTimeoutSec,
             Long pollingFreqSec,
@@ -147,6 +149,12 @@ public class AWSCodeDeployPublisher extends Publisher {
         this.iamRoleArn = iamRoleArn;
         this.deploymentGroupAppspec = deploymentGroupAppspec;
 
+        if (onlyRevision != null && onlyRevision) {
+          this.onlyRevision = onlyRevision;
+        } else {
+          this.onlyRevision = false;
+        }
+
         if (waitForCompletion != null && waitForCompletion) {
             this.waitForCompletion = waitForCompletion;
             if (pollingTimeoutSec == null) {
@@ -164,7 +172,6 @@ public class AWSCodeDeployPublisher extends Publisher {
             this.pollingTimeoutSec = null;
             this.pollingFreqSec = null;
         }
-
 
         this.s3bucket = s3bucket;
         if (s3prefix == null || s3prefix.equals("/") || s3prefix.length() == 0) {
@@ -218,9 +225,14 @@ public class AWSCodeDeployPublisher extends Publisher {
             RevisionLocation revisionLocation = zipAndUpload(aws, projectName, getSourceDirectory(build.getWorkspace()));
 
             registerRevision(aws, revisionLocation);
-            String deploymentId = createDeployment(aws, revisionLocation);
+            if (this.onlyRevision){
+              success = true;
+            } else {
 
-            success = waitForDeployment(aws, deploymentId);
+              String deploymentId = createDeployment(aws, revisionLocation);
+
+              success = waitForDeployment(aws, deploymentId);
+            }
 
         } catch (Exception e) {
 
@@ -263,7 +275,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         ListApplicationsResult applications = aws.codedeploy.listApplications();
         String applicationName = getApplicationNameFromEnv();
         String deploymentGroupName = getDeploymentGroupNameFromEnv();
- 
+
         if (!applications.getApplications().contains(applicationName)) {
             throw new IllegalArgumentException("Cannot find application named '" + applicationName + "'");
         }
@@ -418,9 +430,9 @@ public class AWSCodeDeployPublisher extends Publisher {
 
             Thread.sleep(pollingFreqMillis);
         }
-        
+
         logger.println("Deployment status: " + deployStatus.getStatus() + "; instances: " + deployStatus.getDeploymentOverview());
-        
+
         if (!deployStatus.getStatus().equals(DeploymentStatus.Succeeded.toString())) {
             this.logger.println("Deployment did not succeed. Final status: " + deployStatus.getStatus());
             success = false;
@@ -634,6 +646,10 @@ public class AWSCodeDeployPublisher extends Publisher {
         return externalId;
     }
 
+    public boolean getOnlyRevision() {
+        return onlyRevision;
+    }
+
     public boolean getWaitForCompletion() {
         return waitForCompletion;
     }
@@ -690,4 +706,3 @@ public class AWSCodeDeployPublisher extends Publisher {
         return Util.replaceMacro(this.s3prefix, envVars);
     }
 }
-
