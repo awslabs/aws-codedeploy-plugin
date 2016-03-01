@@ -57,6 +57,7 @@ import org.kohsuke.stapler.StaplerRequest;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Date;
@@ -101,6 +102,7 @@ public class AWSCodeDeployPublisher extends Publisher {
     private final String awsSecretKey;
     private final String credentials;
     private final String deploymentMethod;
+    private final String versionFileName;
 
     private PrintStream logger;
     private Map <String, String> envVars;
@@ -118,6 +120,7 @@ public class AWSCodeDeployPublisher extends Publisher {
             Long pollingTimeoutSec,
             Long pollingFreqSec,
             String credentials,
+            String versionFileName,
             String deploymentMethod,
             String awsAccessKey,
             String awsSecretKey,
@@ -145,6 +148,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         this.proxyPort = proxyPort;
         this.credentials = credentials;
         this.deploymentMethod = deploymentMethod;
+        this.versionFileName = versionFileName;
         this.awsAccessKey = awsAccessKey;
         this.awsSecretKey = awsSecretKey;
         this.iamRoleArn = iamRoleArn;
@@ -336,12 +340,34 @@ public class AWSCodeDeployPublisher extends Publisher {
             logger.println("Uploading zip to s3://" + bucket + "/" + key);
             PutObjectResult s3result = aws.s3.putObject(bucket, key, zipFile);
 
+            File versionFile;
+            versionFile = new File(sourceDirectory + "/" + versionFileName);
+
+            FileReader reader = null;
+            String version = null;
+            try {
+              reader = new FileReader(versionFile);
+              char[] chars = new char[(int) versionFile.length()];
+              reader.read(chars);
+              version = new String(chars);
+              reader.close();
+            } catch (IOException e) {
+              e.printStackTrace();
+            } finally {
+              if(reader !=null){reader.close();}
+            }
 
             S3Location s3Location = new S3Location();
             s3Location.setBucket(bucket);
             s3Location.setKey(key);
             s3Location.setBundleType(BundleType.Zip);
             s3Location.setETag(s3result.getETag());
+
+            if (version != null){
+              s3Location.setVersion(version);
+            }
+
+
 
             RevisionLocation revisionLocation = new RevisionLocation();
             revisionLocation.setRevisionType(RevisionLocationType.S3);
@@ -643,6 +669,10 @@ public class AWSCodeDeployPublisher extends Publisher {
 
     public String getDeploymentMethod() {
         return deploymentMethod;
+    }
+
+    public String getVersionFileName() {
+        return versionFileName;
     }
 
     public boolean getWaitForCompletion() {

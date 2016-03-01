@@ -29,8 +29,11 @@
   <f:entry title="Proxy Host" field="proxyHost">
     <f:textbox default="" />
   </f:entry>
-    <f:entry title="Proxy Port" field="proxyPort">
+  <f:entry title="Proxy Port" field="proxyPort">
     <f:textbox default="" />
+  </f:entry>
+  <f:entry title="Version File" field="versionFileName">
+    <f:textbox />
   </f:entry>
 
     <f:entry title="Appspec.yml per Deployment Group"  field="deploymentGroupAppspec">
