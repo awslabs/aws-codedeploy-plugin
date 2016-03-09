@@ -292,7 +292,31 @@ public class AWSCodeDeployPublisher extends Publisher {
 
     private RevisionLocation zipAndUpload(AWSClients aws, String projectName, FilePath sourceDirectory) throws IOException, InterruptedException, IllegalArgumentException {
 
-        File zipFile = File.createTempFile(projectName + "-", ".zip");
+        File zipFile = null;
+        File versionFile;
+        versionFile = new File(sourceDirectory + "/" + versionFileName);
+
+        FileReader reader = null;
+        String version = null;
+        try {
+          reader = new FileReader(versionFile);
+          char[] chars = new char[(int) versionFile.length() -1];
+          reader.read(chars);
+          version = new String(chars);
+          reader.close();
+        } catch (IOException e) {
+          e.printStackTrace();
+        } finally {
+          if(reader !=null){reader.close();}
+        }
+
+        if (version != null){
+          zipFile = new File("/tmp/" + projectName + "-" + version + ".zip");
+          zipFile.createNewFile();
+        } else {
+          zipFile = File.createTempFile(projectName + "-", ".zip");
+        }
+
         String key;
         File appspec;
         File dest;
@@ -340,34 +364,11 @@ public class AWSCodeDeployPublisher extends Publisher {
             logger.println("Uploading zip to s3://" + bucket + "/" + key);
             PutObjectResult s3result = aws.s3.putObject(bucket, key, zipFile);
 
-            File versionFile;
-            versionFile = new File(sourceDirectory + "/" + versionFileName);
-
-            FileReader reader = null;
-            String version = null;
-            try {
-              reader = new FileReader(versionFile);
-              char[] chars = new char[(int) versionFile.length()];
-              reader.read(chars);
-              version = new String(chars);
-              reader.close();
-            } catch (IOException e) {
-              e.printStackTrace();
-            } finally {
-              if(reader !=null){reader.close();}
-            }
-
             S3Location s3Location = new S3Location();
             s3Location.setBucket(bucket);
             s3Location.setKey(key);
             s3Location.setBundleType(BundleType.Zip);
             s3Location.setETag(s3result.getETag());
-
-            if (version != null){
-              s3Location.setVersion(version);
-            }
-
-
 
             RevisionLocation revisionLocation = new RevisionLocation();
             revisionLocation.setRevisionType(RevisionLocationType.S3);
