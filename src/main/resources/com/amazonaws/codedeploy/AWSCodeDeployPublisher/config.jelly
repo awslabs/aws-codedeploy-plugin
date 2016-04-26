@@ -29,22 +29,36 @@
   <f:entry title="Proxy Host" field="proxyHost">
     <f:textbox default="" />
   </f:entry>
-    <f:entry title="Proxy Port" field="proxyPort">
+  <f:entry title="Proxy Port" field="proxyPort">
     <f:textbox default="" />
+  </f:entry>
+  <f:entry title="Version File" field="versionFileName">
+    <f:textbox />
   </f:entry>
 
     <f:entry title="Appspec.yml per Deployment Group"  field="deploymentGroupAppspec">
       <f:checkbox field="deploymentGroupAppspec" checked="${instance.getDeploymentGroupAppspec}"/>
     </f:entry>
 
-  <f:optionalBlock title="Wait for deployment to finish?" field="waitForCompletion"  checked="${instance.getWaitForCompletion()}" inline="true">
-    <f:entry title="Polling Timeout (s)" field="pollingTimeoutSec">
-      <f:textbox default="300"/>
-    </f:entry>
-    <f:entry title="Polling Frequency (s)" field="pollingFreqSec">
-      <f:textbox default="15"/>
-    </f:entry>
-  </f:optionalBlock>
+    <f:radioBlock title="Register Revision" name="deploymentMethod" value="onlyRevision" checked="${instance.getDeploymentMethod() == 'onlyRevision'}" inline="true">
+      <f:description>
+        Register the new revision with the specified CodeDeploy application but do not deploy it.
+      </f:description>
+    </f:radioBlock>
+
+    <f:radioBlock title="Deploy Revision" name="deploymentMethod" value="deploy" checked="${instance.getDeploymentMethod() == 'deploy'}" inline="true">
+      <f:description>
+        Register the new revision and deploy it to the specified CodeDeploy deployment group.
+      </f:description>
+      <f:optionalBlock title="Wait for deployment to finish?" field="waitForCompletion" checked="${instance.getWaitForCompletion()}" inline="true">
+        <f:entry title="Polling Timeout (s)" field="pollingTimeoutSec">
+          <f:textbox default="300"/>
+        </f:entry>
+        <f:entry title="Polling Frequency (s)" field="pollingFreqSec">
+          <f:textbox default="15"/>
+        </f:entry>
+      </f:optionalBlock>
+    </f:radioBlock>
 
   <f:radioBlock title="Use Access/Secret keys" name="credentials" checked="${instance.getCredentials() == 'awsAccessKey'}" inline="true" value="awsAccessKey">
     <f:description>

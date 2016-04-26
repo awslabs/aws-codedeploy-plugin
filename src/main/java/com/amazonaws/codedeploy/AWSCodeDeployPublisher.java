@@ -57,6 +57,7 @@ import org.kohsuke.stapler.StaplerRequest;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Date;
@@ -100,6 +101,8 @@ public class AWSCodeDeployPublisher extends Publisher {
     private final String awsAccessKey;
     private final String awsSecretKey;
     private final String credentials;
+    private final String deploymentMethod;
+    private final String versionFileName;
 
     private PrintStream logger;
     private Map <String, String> envVars;
@@ -117,6 +120,8 @@ public class AWSCodeDeployPublisher extends Publisher {
             Long pollingTimeoutSec,
             Long pollingFreqSec,
             String credentials,
+            String versionFileName,
+            String deploymentMethod,
             String awsAccessKey,
             String awsSecretKey,
             String iamRoleArn,
@@ -142,6 +147,8 @@ public class AWSCodeDeployPublisher extends Publisher {
         this.proxyHost = proxyHost;
         this.proxyPort = proxyPort;
         this.credentials = credentials;
+        this.deploymentMethod = deploymentMethod;
+        this.versionFileName = versionFileName;
         this.awsAccessKey = awsAccessKey;
         this.awsSecretKey = awsSecretKey;
         this.iamRoleArn = iamRoleArn;
@@ -164,7 +171,6 @@ public class AWSCodeDeployPublisher extends Publisher {
             this.pollingTimeoutSec = null;
             this.pollingFreqSec = null;
         }
-
 
         this.s3bucket = s3bucket;
         if (s3prefix == null || s3prefix.equals("/") || s3prefix.length() == 0) {
@@ -218,9 +224,14 @@ public class AWSCodeDeployPublisher extends Publisher {
             RevisionLocation revisionLocation = zipAndUpload(aws, projectName, getSourceDirectory(build.getWorkspace()));
 
             registerRevision(aws, revisionLocation);
-            String deploymentId = createDeployment(aws, revisionLocation);
+            if ("onlyRevision".equals(deploymentMethod)){
+              success = true;
+            } else {
 
-            success = waitForDeployment(aws, deploymentId);
+              String deploymentId = createDeployment(aws, revisionLocation);
+
+              success = waitForDeployment(aws, deploymentId);
+            }
 
         } catch (Exception e) {
 
@@ -263,7 +274,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         ListApplicationsResult applications = aws.codedeploy.listApplications();
         String applicationName = getApplicationNameFromEnv();
         String deploymentGroupName = getDeploymentGroupNameFromEnv();
- 
+
         if (!applications.getApplications().contains(applicationName)) {
             throw new IllegalArgumentException("Cannot find application named '" + applicationName + "'");
         }
@@ -281,7 +292,31 @@ public class AWSCodeDeployPublisher extends Publisher {
 
     private RevisionLocation zipAndUpload(AWSClients aws, String projectName, FilePath sourceDirectory) throws IOException, InterruptedException, IllegalArgumentException {
 
-        File zipFile = File.createTempFile(projectName + "-", ".zip");
+        File zipFile = null;
+        File versionFile;
+        versionFile = new File(sourceDirectory + "/" + versionFileName);
+
+        FileReader reader = null;
+        String version = null;
+        try {
+          reader = new FileReader(versionFile);
+          char[] chars = new char[(int) versionFile.length() -1];
+          reader.read(chars);
+          version = new String(chars);
+          reader.close();
+        } catch (IOException e) {
+          e.printStackTrace();
+        } finally {
+          if(reader !=null){reader.close();}
+        }
+
+        if (version != null){
+          zipFile = new File("/tmp/" + projectName + "-" + version + ".zip");
+          zipFile.createNewFile();
+        } else {
+          zipFile = File.createTempFile(projectName + "-", ".zip");
+        }
+
         String key;
         File appspec;
         File dest;
@@ -328,7 +363,6 @@ public class AWSCodeDeployPublisher extends Publisher {
             }
             logger.println("Uploading zip to s3://" + bucket + "/" + key);
             PutObjectResult s3result = aws.s3.putObject(bucket, key, zipFile);
-
 
             S3Location s3Location = new S3Location();
             s3Location.setBucket(bucket);
@@ -418,9 +452,9 @@ public class AWSCodeDeployPublisher extends Publisher {
 
             Thread.sleep(pollingFreqMillis);
         }
-        
+
         logger.println("Deployment status: " + deployStatus.getStatus() + "; instances: " + deployStatus.getDeploymentOverview());
-        
+
         if (!deployStatus.getStatus().equals(DeploymentStatus.Succeeded.toString())) {
             this.logger.println("Deployment did not succeed. Final status: " + deployStatus.getStatus());
             success = false;
@@ -634,6 +668,14 @@ public class AWSCodeDeployPublisher extends Publisher {
         return externalId;
     }
 
+    public String getDeploymentMethod() {
+        return deploymentMethod;
+    }
+
+    public String getVersionFileName() {
+        return versionFileName;
+    }
+
     public boolean getWaitForCompletion() {
         return waitForCompletion;
     }
@@ -690,4 +732,3 @@ public class AWSCodeDeployPublisher extends Publisher {
         return Util.replaceMacro(this.s3prefix, envVars);
     }
 }
-
