@@ -246,7 +246,7 @@ public class AWSCodeDeployPublisher extends Publisher {
     }
 
     private FilePath getSourceDirectory(FilePath basePath) throws IOException, InterruptedException {
-        String subdirectory = StringUtils.trimToEmpty(this.subdirectory);
+        String subdirectory = StringUtils.trimToEmpty(getSubdirectoryFromEnv());
         if (!subdirectory.isEmpty() && !subdirectory.startsWith("/")) {
             subdirectory = "/" + subdirectory;
         }
@@ -730,5 +730,9 @@ public class AWSCodeDeployPublisher extends Publisher {
 
     public String getS3PrefixFromEnv() {
         return Util.replaceMacro(this.s3prefix, envVars);
+    }
+
+    public String getSubdirectoryFromEnv() {
+        return Util.replaceMacro(this.subdirectory, envVars);
     }
 }
