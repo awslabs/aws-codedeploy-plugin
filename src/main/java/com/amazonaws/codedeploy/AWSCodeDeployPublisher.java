@@ -20,6 +20,8 @@ import com.amazonaws.services.codedeploy.model.ListDeploymentGroupsRequest;
 import com.amazonaws.services.codedeploy.model.ListDeploymentGroupsResult;
 import com.amazonaws.services.codedeploy.model.RevisionLocation;
 import com.amazonaws.services.codedeploy.model.RevisionLocationType;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.codedeploy.model.BundleType;
 import com.amazonaws.services.codedeploy.model.CreateDeploymentRequest;
@@ -75,22 +77,23 @@ import javax.servlet.ServletException;
  * credentials to be configured for each project.
  */
 public class AWSCodeDeployPublisher extends Publisher {
-    public static final long      DEFAULT_TIMEOUT_SECONDS           = 900;
-    public static final long      DEFAULT_POLLING_FREQUENCY_SECONDS = 15;
-    public static final String    ROLE_SESSION_NAME                 = "jenkins-codedeploy-plugin";
-    public static final Regions[] AVAILABLE_REGIONS                 = {Regions.AP_NORTHEAST_1, Regions.AP_SOUTHEAST_1, Regions.AP_SOUTHEAST_2, Regions.EU_WEST_1, Regions.US_EAST_1, Regions.US_WEST_2, Regions.EU_CENTRAL_1, Regions.US_WEST_1, Regions.SA_EAST_1};
+    public static final long DEFAULT_TIMEOUT_SECONDS = 900;
+    public static final long DEFAULT_POLLING_FREQUENCY_SECONDS = 15;
+    public static final String ROLE_SESSION_NAME = "jenkins-codedeploy-plugin";
+    public static final Regions[] AVAILABLE_REGIONS = {Regions.AP_NORTHEAST_1, Regions.AP_SOUTHEAST_1, Regions.AP_SOUTHEAST_2, Regions.EU_WEST_1, Regions.US_EAST_1, Regions.US_WEST_2, Regions.EU_CENTRAL_1, Regions.US_WEST_1, Regions.SA_EAST_1};
 
-    private final String  s3bucket;
-    private final String  s3prefix;
-    private final String  applicationName;
-    private final String  deploymentGroupName; // TODO allow for deployment to multiple groups
-    private final String  deploymentConfig;
-    private final Long    pollingTimeoutSec;
-    private final Long    pollingFreqSec;
+    private final String s3bucket;
+    private final String s3prefix;
+    private final String applicationName;
+    private final String deploymentGroupName; // TODO allow for deployment to multiple groups
+    private final String deploymentConfig;
+    private final Long pollingTimeoutSec;
+    private final Long pollingFreqSec;
     private final boolean deploymentGroupAppspec;
     private final boolean waitForCompletion;
-    private final String  externalId;
-    private final String  iamRoleArn;
+    private final boolean serverEncryptFile;
+    private final String externalId;
+    private final String iamRoleArn;
     private final String region;
     private final String includes;
     private final String excludes;
@@ -105,7 +108,8 @@ public class AWSCodeDeployPublisher extends Publisher {
     private final String versionFileName;
 
     private PrintStream logger;
-    private Map <String, String> envVars;
+    private Map<String, String> envVars;
+
     // Fields in config.jelly must match the parameter names in the "DataBoundConstructor"
     @DataBoundConstructor
     public AWSCodeDeployPublisher(
@@ -117,6 +121,7 @@ public class AWSCodeDeployPublisher extends Publisher {
             String region,
             Boolean deploymentGroupAppspec,
             Boolean waitForCompletion,
+            Boolean serverEncryptFile,
             Long pollingTimeoutSec,
             Long pollingFreqSec,
             String credentials,
@@ -171,7 +176,7 @@ public class AWSCodeDeployPublisher extends Publisher {
             this.pollingTimeoutSec = null;
             this.pollingFreqSec = null;
         }
-
+        this.serverEncryptFile = serverEncryptFile;
         this.s3bucket = s3bucket;
         if (s3prefix == null || s3prefix.equals("/") || s3prefix.length() == 0) {
             this.s3prefix = "";
@@ -207,11 +212,11 @@ public class AWSCodeDeployPublisher extends Publisher {
             }
         } else {
             aws = AWSClients.fromIAMRole(
-                this.region,
-                this.iamRoleArn,
-                this.getDescriptor().getExternalId(),
-                this.proxyHost,
-                this.proxyPort);
+                    this.region,
+                    this.iamRoleArn,
+                    this.getDescriptor().getExternalId(),
+                    this.proxyHost,
+                    this.proxyPort);
         }
 
         boolean success;
@@ -224,13 +229,13 @@ public class AWSCodeDeployPublisher extends Publisher {
             RevisionLocation revisionLocation = zipAndUpload(aws, projectName, getSourceDirectory(build.getWorkspace()));
 
             registerRevision(aws, revisionLocation);
-            if ("onlyRevision".equals(deploymentMethod)){
-              success = true;
+            if ("onlyRevision".equals(deploymentMethod)) {
+                success = true;
             } else {
 
-              String deploymentId = createDeployment(aws, revisionLocation);
+                String deploymentId = createDeployment(aws, revisionLocation);
 
-              success = waitForDeployment(aws, deploymentId);
+                success = waitForDeployment(aws, deploymentId);
             }
 
         } catch (Exception e) {
@@ -253,14 +258,14 @@ public class AWSCodeDeployPublisher extends Publisher {
         FilePath sourcePath = basePath.withSuffix(subdirectory).absolutize();
         if (!sourcePath.isDirectory() || !isSubDirectory(basePath, sourcePath)) {
             throw new IllegalArgumentException("Provided path (resolved as '" + sourcePath
-                    +"') is not a subdirectory of the workspace (resolved as '" + basePath + "')");
+                    + "') is not a subdirectory of the workspace (resolved as '" + basePath + "')");
         }
         return sourcePath;
     }
 
     private boolean isSubDirectory(FilePath parent, FilePath child) {
         FilePath parentFolder = child;
-        while (parentFolder!=null) {
+        while (parentFolder != null) {
             if (parent.equals(parentFolder)) {
                 return true;
             }
@@ -299,22 +304,24 @@ public class AWSCodeDeployPublisher extends Publisher {
         FileReader reader = null;
         String version = null;
         try {
-          reader = new FileReader(versionFile);
-          char[] chars = new char[(int) versionFile.length() -1];
-          reader.read(chars);
-          version = new String(chars);
-          reader.close();
+            reader = new FileReader(versionFile);
+            char[] chars = new char[(int) versionFile.length() - 1];
+            reader.read(chars);
+            version = new String(chars);
+            reader.close();
         } catch (IOException e) {
-          e.printStackTrace();
+            e.printStackTrace();
         } finally {
-          if(reader !=null){reader.close();}
+            if (reader != null) {
+                reader.close();
+            }
         }
 
-        if (version != null){
-          zipFile = new File("/tmp/" + projectName + "-" + version + ".zip");
-          zipFile.createNewFile();
+        if (version != null) {
+            zipFile = new File("/tmp/" + projectName + "-" + version + ".zip");
+            zipFile.createNewFile();
         } else {
-          zipFile = File.createTempFile(projectName + "-", ".zip");
+            zipFile = File.createTempFile(projectName + "-", ".zip");
         }
 
         String key;
@@ -324,7 +331,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         String prefix = getS3PrefixFromEnv();
         String bucket = getS3BucketFromEnv();
 
-        if(bucket.indexOf("/") > 0){
+        if (bucket.indexOf("/") > 0) {
             throw new IllegalArgumentException("S3 Bucket field cannot contain any subdirectories.  Bucket name only!");
         }
 
@@ -337,13 +344,12 @@ public class AWSCodeDeployPublisher extends Publisher {
                     logger.println("Use appspec." + deploymentGroupName + ".yml");
                 }
                 if (!appspec.exists()) {
-                    throw new IllegalArgumentException("/appspec." + deploymentGroupName + ".yml file does not exist" );
+                    throw new IllegalArgumentException("/appspec." + deploymentGroupName + ".yml file does not exist");
                 }
 
             }
 
             logger.println("Zipping files into " + zipFile.getAbsolutePath());
-
 
 
             sourceDirectory.zip(
@@ -361,8 +367,23 @@ public class AWSCodeDeployPublisher extends Publisher {
                     key += "/" + zipFile.getName();
                 }
             }
-            logger.println("Uploading zip to s3://" + bucket + "/" + key);
-            PutObjectResult s3result = aws.s3.putObject(bucket, key, zipFile);
+            PutObjectResult s3result;
+            if (getServerEncryptFile()) {
+                PutObjectRequest putRequest = new PutObjectRequest(bucket, key, zipFile);
+
+                ObjectMetadata objectMetadata = new ObjectMetadata();
+                objectMetadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
+
+                logger.println("Uploading and encrypting zip to s3://" + bucket + "/" + key);
+
+                putRequest.setMetadata(objectMetadata);
+
+                s3result = aws.s3.putObject(putRequest);
+                logger.println("Uploaded object encryption status is " + s3result.getSSEAlgorithm());
+            } else {
+                logger.println("Uploading zip to s3://" + bucket + "/" + key);
+                s3result = aws.s3.putObject(bucket, key, zipFile);
+            }
 
             S3Location s3Location = new S3Location();
             s3Location.setBucket(bucket);
@@ -602,23 +623,19 @@ public class AWSCodeDeployPublisher extends Publisher {
             return items;
         }
 
-        public String getAwsSecretKey()
-        {
+        public String getAwsSecretKey() {
             return awsSecretKey;
         }
 
-        public void setAwsSecretKey(String awsSecretKey)
-        {
+        public void setAwsSecretKey(String awsSecretKey) {
             this.awsSecretKey = awsSecretKey;
         }
 
-        public String getAwsAccessKey()
-        {
+        public String getAwsAccessKey() {
             return awsAccessKey;
         }
 
-        public void setAwsAccessKey(String awsAccessKey)
-        {
+        public void setAwsAccessKey(String awsAccessKey) {
             this.awsAccessKey = awsAccessKey;
         }
 
@@ -682,6 +699,10 @@ public class AWSCodeDeployPublisher extends Publisher {
 
     public boolean getDeploymentGroupAppspec() {
         return deploymentGroupAppspec;
+    }
+
+    public boolean getServerEncryptFile() {
+        return serverEncryptFile;
     }
 
     public String getCredentials() {

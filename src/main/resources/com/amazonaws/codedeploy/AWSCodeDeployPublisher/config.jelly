@@ -40,6 +40,10 @@
       <f:checkbox field="deploymentGroupAppspec" checked="${instance.getDeploymentGroupAppspec}"/>
     </f:entry>
 
+   <f:entry title="Encrypt file on server"  field="serverEncryptFile">
+      <f:checkbox field="serverEncryptFile" checked="${instance.getServerEncryptFile}"/>
+    </f:entry>
+
     <f:radioBlock title="Register Revision" name="deploymentMethod" value="onlyRevision" checked="${instance.getDeploymentMethod() == 'onlyRevision'}" inline="true">
       <f:description>
         Register the new revision with the specified CodeDeploy application but do not deploy it.
