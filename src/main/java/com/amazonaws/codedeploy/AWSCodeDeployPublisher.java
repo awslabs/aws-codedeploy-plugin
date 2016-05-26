@@ -379,11 +379,8 @@ public class AWSCodeDeployPublisher extends Publisher {
                 putRequest.setMetadata(objectMetadata);
 
                 s3result = aws.s3.putObject(putRequest);
-                System.out.println("Uploaded object encryption status is " +
-                        s3result.getSSEAlgorithm());
-            }
-            else {
-
+                logger.println("Uploaded object encryption status is " + s3result.getSSEAlgorithm());
+            } else {
                 logger.println("Uploading zip to s3://" + bucket + "/" + key);
                 s3result = aws.s3.putObject(bucket, key, zipFile);
             }
