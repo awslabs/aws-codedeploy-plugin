@@ -12,6 +12,8 @@ Setting up
 After building and installing the plugin, some simple configuration is needed
 for your project. 
 
+**Freestyle**
+
 1. Open up your project configuration
 1. In the `Post-build Actions` section, select "Deploy an application to AWS
 CodeDeploy"
@@ -24,6 +26,18 @@ associated role has, at minimum, a policy that permits `codedeploy:*` and
   IAM user. If left blank, the default chain of credentials will be checked.
   1. Temporary access keys. These will use the global keys from the Jenkins
   instance.
+
+**Pipeline**
+
+1.  Create a [Jenkins Pipeline](https://wiki.jenkins-ci.org/display/JENKINS/Pipeline+Plugin) project
+1.  Use the Pipeline Snippet Generator
+1.  For 'Sample Step', choose 'step: General Build Step'
+1.  For 'Build Step', choose 'Deploy an application to AWS CodeDeploy'
+1.  populate variables and then 'Generate Groovy'
+
+Here is a rather blank example:
+
+	step([$class: 'AWSCodeDeployPublisher', applicationName: '', awsAccessKey: '', awsSecretKey: '', credentials: 'awsAccessKey', deploymentGroupAppspec: false, deploymentGroupName: '', deploymentMethod: 'deploy', excludes: '', iamRoleArn: '', includes: '**', proxyHost: '', proxyPort: 0, region: 'ap-northeast-1', s3bucket: '', s3prefix: '', subdirectory: '', versionFileName: '', waitForCompletion: false])
 
 License
 -------

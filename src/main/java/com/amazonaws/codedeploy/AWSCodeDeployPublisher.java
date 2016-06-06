@@ -35,10 +35,7 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Extension;
 import hudson.Util;
-import hudson.model.AbstractBuild;
-import hudson.model.BuildListener;
-import hudson.model.AbstractProject;
-import hudson.model.Result;
+import hudson.model.*;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Publisher;
@@ -46,6 +43,7 @@ import hudson.util.DirScanner;
 import hudson.util.FileVisitor;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 
@@ -64,17 +62,18 @@ import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 
 /**
  * The AWS CodeDeploy Publisher is a post-build plugin that adds the ability to start a new CodeDeploy deployment
  * with the project's workspace as the application revision.
- * <p/>
+ *
  * To configure, users must create an IAM role that allows "S3" and "CodeDeploy" actions and must be assumable by
  * the globally configured keys. This allows the plugin to get temporary credentials instead of requiring permanent
  * credentials to be configured for each project.
  */
-public class AWSCodeDeployPublisher extends Publisher {
+public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep {
     public static final long      DEFAULT_TIMEOUT_SECONDS           = 900;
     public static final long      DEFAULT_POLLING_FREQUENCY_SECONDS = 15;
     public static final String    ROLE_SESSION_NAME                 = "jenkins-codedeploy-plugin";
@@ -181,13 +180,13 @@ public class AWSCodeDeployPublisher extends Publisher {
     }
 
     @Override
-    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
+    public void perform(@Nonnull Run<?,?> build, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws IOException, InterruptedException {
         this.logger = listener.getLogger();
         envVars = build.getEnvironment(listener);
         final boolean buildFailed = build.getResult() == Result.FAILURE;
         if (buildFailed) {
             logger.println("Skipping CodeDeploy publisher as build failed");
-            return true;
+            return;
         }
 
         AWSClients aws;
@@ -220,8 +219,8 @@ public class AWSCodeDeployPublisher extends Publisher {
 
             verifyCodeDeployApplication(aws);
 
-            String projectName = build.getProject().getName();
-            RevisionLocation revisionLocation = zipAndUpload(aws, projectName, getSourceDirectory(build.getWorkspace()));
+            String projectName = build.getDisplayName();
+            RevisionLocation revisionLocation = zipAndUpload(aws, projectName, getSourceDirectory(workspace));
 
             registerRevision(aws, revisionLocation);
             if ("onlyRevision".equals(deploymentMethod)){
@@ -238,11 +237,9 @@ public class AWSCodeDeployPublisher extends Publisher {
             this.logger.println("Failed CodeDeploy post-build step; exception follows.");
             this.logger.println(e.getMessage());
             e.printStackTrace(this.logger);
-            success = false;
-
         }
 
-        return success;
+        return;
     }
 
     private FilePath getSourceDirectory(FilePath basePath) throws IOException, InterruptedException {
@@ -478,10 +475,10 @@ public class AWSCodeDeployPublisher extends Publisher {
     }
 
     /**
+     *
      * Descriptor for {@link AWSCodeDeployPublisher}. Used as a singleton.
      * The class is marked as public so that it can be accessed from views.
-     * <p/>
-     * <p/>
+     *
      * See <tt>src/main/resources/com/amazonaws/codedeploy/AWSCodeDeployPublisher/*.jelly</tt>
      * for the actual HTML fragment for the configuration screen.
      */
