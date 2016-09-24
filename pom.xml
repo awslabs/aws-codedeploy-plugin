@@ -54,7 +54,7 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>aws-java-sdk</artifactId>
-      <version>1.10.26</version>
+      <version>1.11.37</version>
     </dependency>
   </dependencies>
 
