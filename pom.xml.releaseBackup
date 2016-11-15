@@ -7,7 +7,7 @@
   </parent>
 
   <artifactId>codedeploy</artifactId>
-  <version>1.16-SNAPSHOT</version>
+  <version>1.15-SNAPSHOT</version>
   <packaging>hpi</packaging>
   <groupId>com.amazonaws</groupId>
   <name>AWS CodeDeploy Plugin for Jenkins</name>
@@ -46,8 +46,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <jenkins.version>1.612</jenkins.version>
-    <java.level>7</java.level>
+    <jenkins.version>1.580.3</jenkins.version>
   </properties>
 
   <dependencies>
@@ -69,6 +68,13 @@
     <plugins>
       <plugin>
         <artifactId>maven-release-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <additionalparam>-Xdoclint:none</additionalparam>
+        </configuration>
       </plugin>
     </plugins>
   </build>
