@@ -129,7 +129,7 @@ public class AWSClients {
         File file = File.createTempFile("codedeploy-jenkins-plugin", ".txt");
         file.deleteOnExit();
 
-        Writer writer = new OutputStreamWriter(new FileOutputStream(file));
+        Writer writer = new OutputStreamWriter(new FileOutputStream(file), "UTF-8");
         writer.write("");
         writer.close();
 
