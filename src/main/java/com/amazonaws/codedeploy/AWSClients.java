@@ -72,6 +72,7 @@ public class AWSClients {
         this.s3 = credentials != null ? new AmazonS3Client(credentials, clientCfg) : new AmazonS3Client(clientCfg);
         this.codedeploy = credentials != null ? new AmazonCodeDeployClient(credentials, clientCfg) : new AmazonCodeDeployClient(clientCfg);
         codedeploy.setRegion(Region.getRegion(Regions.fromName(this.region)));
+        s3.setRegion(Region.getRegion(Regions.fromName(this.region)));
     }
     
     public static AWSClients fromDefaultCredentialChain(String region, String proxyHost, int proxyPort) {
