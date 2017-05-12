@@ -7,7 +7,7 @@
   </parent>
 
   <artifactId>codedeploy</artifactId>
-  <version>1.17-SNAPSHOT</version>
+  <version>1.17</version>
   <packaging>hpi</packaging>
   <groupId>com.amazonaws</groupId>
   <name>AWS CodeDeploy Plugin for Jenkins</name>
@@ -34,7 +34,7 @@
     <connection>scm:git:ssh://github.com/jenkinsci/aws-codedeploy-plugin.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/jenkinsci/aws-codedeploy-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/aws-codedeploy-plugin</url>
-    <tag>HEAD</tag>
+    <tag>codedeploy-1.17</tag>
   </scm>
 
   <repositories>
