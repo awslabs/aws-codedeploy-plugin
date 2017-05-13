@@ -3,11 +3,11 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>2.19</version>
+    <version>1.554.1</version>
   </parent>
 
   <artifactId>codedeploy</artifactId>
-  <version>1.17-SNAPSHOT</version>
+  <version>1.12-SNAPSHOT</version>
   <packaging>hpi</packaging>
   <groupId>com.amazonaws</groupId>
   <name>AWS CodeDeploy Plugin for Jenkins</name>
@@ -16,9 +16,9 @@
 
   <developers>
     <developer>
-      <id>jmcfar</id>
-      <name>Josh Mcfarlane</name>
-      <email>jmcfar@amazon.com</email>
+      <id>afitzgibbon</id>
+      <name>Andrew Fitz Gibbon</name>
+      <email>gibbon@amazon.com</email>
     </developer>
   </developers>
 
@@ -45,16 +45,16 @@
   </repositories>
 
   <properties>
+    <jackson.version>2.1.1</jackson.version>
+    <spring.version>3.0.7.RELEASE</spring.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <jenkins.version>1.612</jenkins.version>
-    <java.level>7</java.level>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>aws-java-sdk</artifactId>
-      <version>1.11.119</version>
+      <version>1.10.26</version>
     </dependency>
   </dependencies>
 
@@ -69,7 +69,9 @@
     <plugins>
       <plugin>
         <artifactId>maven-release-plugin</artifactId>
+        <version>2.5</version>
       </plugin>
     </plugins>
   </build>
+
 </project>

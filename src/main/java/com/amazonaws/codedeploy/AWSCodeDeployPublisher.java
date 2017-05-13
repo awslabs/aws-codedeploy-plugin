@@ -56,8 +56,9 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
+import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Date;
@@ -78,7 +79,7 @@ public class AWSCodeDeployPublisher extends Publisher {
     public static final long      DEFAULT_TIMEOUT_SECONDS           = 900;
     public static final long      DEFAULT_POLLING_FREQUENCY_SECONDS = 15;
     public static final String    ROLE_SESSION_NAME                 = "jenkins-codedeploy-plugin";
-    public static final Regions[] AVAILABLE_REGIONS                 = {Regions.AP_NORTHEAST_1, Regions.AP_SOUTHEAST_1, Regions.AP_SOUTHEAST_2, Regions.EU_WEST_1, Regions.US_EAST_1, Regions.US_WEST_2, Regions.EU_CENTRAL_1, Regions.US_WEST_1, Regions.SA_EAST_1};
+    private static final Regions[] AVAILABLE_REGIONS                 = {Regions.AP_NORTHEAST_1, Regions.AP_SOUTHEAST_1, Regions.AP_SOUTHEAST_2, Regions.EU_WEST_1, Regions.US_EAST_1, Regions.US_WEST_2, Regions.EU_CENTRAL_1, Regions.US_WEST_1, Regions.SA_EAST_1, Regions.AP_NORTHEAST_2, Regions.AP_SOUTH_1, Regions.US_EAST_2, Regions.CA_CENTRAL_1, Regions.EU_WEST_2, Regions.CN_NORTH_1};
 
     private final String  s3bucket;
     private final String  s3prefix;
@@ -190,7 +191,7 @@ public class AWSCodeDeployPublisher extends Publisher {
             return true;
         }
 
-        AWSClients aws;
+        final AWSClients aws;
         if ("awsAccessKey".equals(credentials)) {
             if (StringUtils.isEmpty(this.awsAccessKey) && StringUtils.isEmpty(this.awsSecretKey)) {
                 aws = AWSClients.fromDefaultCredentialChain(
@@ -220,8 +221,13 @@ public class AWSCodeDeployPublisher extends Publisher {
 
             verifyCodeDeployApplication(aws);
 
-            String projectName = build.getProject().getName();
-            RevisionLocation revisionLocation = zipAndUpload(aws, projectName, getSourceDirectory(build.getWorkspace()));
+            final String projectName = build.getProject().getName();
+            final FilePath workspace = build.getWorkspace();
+            if (workspace == null) {
+                throw new IllegalArgumentException("No workspace present for the build.");
+            }
+            final FilePath sourceDirectory = getSourceDirectory(workspace);
+            final RevisionLocation revisionLocation = zipAndUpload(aws, projectName, sourceDirectory);
 
             registerRevision(aws, revisionLocation);
             if ("onlyRevision".equals(deploymentMethod)){
@@ -296,10 +302,10 @@ public class AWSCodeDeployPublisher extends Publisher {
         File versionFile;
         versionFile = new File(sourceDirectory + "/" + versionFileName);
 
-        FileReader reader = null;
+        InputStreamReader reader = null;
         String version = null;
         try {
-          reader = new FileReader(versionFile);
+          reader = new InputStreamReader(new FileInputStream(versionFile), "UTF-8");
           char[] chars = new char[(int) versionFile.length() -1];
           reader.read(chars);
           version = new String(chars);
@@ -312,7 +318,10 @@ public class AWSCodeDeployPublisher extends Publisher {
 
         if (version != null){
           zipFile = new File("/tmp/" + projectName + "-" + version + ".zip");
-          zipFile.createNewFile();
+          final boolean fileCreated = zipFile.createNewFile();
+          if (!fileCreated) {
+            logger.println("File already exists, overwriting: " + zipFile.getPath());
+          }
         } else {
           zipFile = File.createTempFile(projectName + "-", ".zip");
         }
@@ -344,12 +353,15 @@ public class AWSCodeDeployPublisher extends Publisher {
 
             logger.println("Zipping files into " + zipFile.getAbsolutePath());
 
-
-
-            sourceDirectory.zip(
-                    new FileOutputStream(zipFile),
-                    new DirScanner.Glob(this.includes, this.excludes)
-            );
+            FileOutputStream outputStream = new FileOutputStream(zipFile);
+            try {
+                sourceDirectory.zip(
+                        outputStream,
+                        new DirScanner.Glob(this.includes, this.excludes)
+                );
+            } finally {
+                outputStream.close();
+            }
 
             if (prefix.isEmpty()) {
                 key = zipFile.getName();
@@ -376,7 +388,10 @@ public class AWSCodeDeployPublisher extends Publisher {
 
             return revisionLocation;
         } finally {
-            zipFile.delete();
+            final boolean deleted = zipFile.delete();
+            if (!deleted) {
+                logger.println("Failed to clean up file " + zipFile.getPath());
+            }
         }
     }
 
@@ -531,7 +546,7 @@ public class AWSCodeDeployPublisher extends Publisher {
             awsAccessKey = formData.getString("awsAccessKey");
             awsSecretKey = formData.getString("awsSecretKey");
             proxyHost = formData.getString("proxyHost");
-            proxyPort = Integer.valueOf(formData.getString("proxyPort"));
+            proxyPort = Integer.parseInt(formData.getString("proxyPort"));
 
             req.bindJSON(this, formData);
             save();

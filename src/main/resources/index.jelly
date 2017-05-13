@@ -1,3 +1,4 @@
+<?jelly escape-by-default='true'?>
 <div>
   This plugin provides a "post-build" step for AWS CodeDeploy.
 </div>
