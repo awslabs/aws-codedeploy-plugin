@@ -31,6 +31,12 @@ import com.amazonaws.services.codedeploy.model.GetDeploymentRequest;
 import com.amazonaws.services.codedeploy.model.RegisterApplicationRevisionRequest;
 import com.amazonaws.services.codedeploy.model.S3Location;
 
+import java.util.List;
+import com.amazonaws.services.codedeploy.model.LifecycleEvent;
+import com.amazonaws.services.codedeploy.model.ListDeploymentInstancesRequest;
+import com.amazonaws.services.codedeploy.model.ListDeploymentInstancesResult;
+import com.amazonaws.services.codedeploy.model.GetDeploymentInstanceRequest;
+
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Extension;
@@ -473,8 +479,23 @@ public class AWSCodeDeployPublisher extends Publisher {
         if (!deployStatus.getStatus().equals(DeploymentStatus.Succeeded.toString())) {
             this.logger.println("Deployment did not succeed. Final status: " + deployStatus.getStatus());
             success = false;
-        }
+        } else {
+            ListDeploymentInstancesResult result = aws.codedeploy.listDeploymentInstances(
+                    new ListDeploymentInstancesRequest().withDeploymentId(deploymentId)
+            );
+            List<String> instanceIds = result.getInstancesList();
 
+            if (instanceIds != null) {
+                for (String instanceId : instanceIds) {
+                    List<LifecycleEvent> lifecycleEvents = aws.codedeploy.getDeploymentInstance(new GetDeploymentInstanceRequest().withDeploymentId(deploymentId).withInstanceId(instanceId)).getInstanceSummary().getLifecycleEvents();
+
+                    for (LifecycleEvent lifecycleEvent : lifecycleEvents) {
+                        long timeDiff = lifecycleEvent.getEndTime().getTime() - lifecycleEvent.getStartTime().getTime();
+                        logger.println("Deployment for intance: " + instanceId + ", event: " + lifecycleEvent.getLifecycleEventName() + ", status: " + lifecycleEvent.getStatus() + ", duration: " + timeDiff + " ms");
+                    }
+                }
+            }
+        }
         return success;
     }
 
