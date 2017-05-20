@@ -185,9 +185,9 @@ public class AWSCodeDeployPublisher extends Publisher {
     public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
         this.logger = listener.getLogger();
         envVars = build.getEnvironment(listener);
-        final boolean buildFailed = build.getResult() == Result.FAILURE;
-        if (buildFailed) {
-            logger.println("Skipping CodeDeploy publisher as build failed");
+        final boolean buildSucceed = build.getResult() == Result.SUCCESS;
+        if (!buildSucceed) {
+            logger.println("Skipping CodeDeploy publisher as build was not successful");
             return true;
         }
 
