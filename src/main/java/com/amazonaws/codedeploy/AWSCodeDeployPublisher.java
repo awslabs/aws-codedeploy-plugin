@@ -104,6 +104,7 @@ public class AWSCodeDeployPublisher extends Publisher {
     private final String credentials;
     private final String deploymentMethod;
     private final String versionFileName;
+    private final String packageName;
 
     private PrintStream logger;
     private Map <String, String> envVars;
@@ -131,7 +132,8 @@ public class AWSCodeDeployPublisher extends Publisher {
             String proxyHost,
             int proxyPort,
             String excludes,
-            String subdirectory) {
+            String subdirectory,
+            String packageName) {
 
         this.externalId = externalId;
         this.applicationName = applicationName;
@@ -154,6 +156,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         this.awsSecretKey = awsSecretKey;
         this.iamRoleArn = iamRoleArn;
         this.deploymentGroupAppspec = deploymentGroupAppspec;
+        this.packageName = packageName;
 
         if (waitForCompletion != null && waitForCompletion) {
             this.waitForCompletion = waitForCompletion;
@@ -221,13 +224,13 @@ public class AWSCodeDeployPublisher extends Publisher {
 
             verifyCodeDeployApplication(aws);
 
-            final String projectName = build.getProject().getName();
+            final String zipName = getPackageName(build);
             final FilePath workspace = build.getWorkspace();
             if (workspace == null) {
                 throw new IllegalArgumentException("No workspace present for the build.");
             }
             final FilePath sourceDirectory = getSourceDirectory(workspace);
-            final RevisionLocation revisionLocation = zipAndUpload(aws, projectName, sourceDirectory);
+            final RevisionLocation revisionLocation = zipAndUpload(aws, zipName, sourceDirectory);
 
             registerRevision(aws, revisionLocation);
             if ("onlyRevision".equals(deploymentMethod)){
@@ -264,6 +267,14 @@ public class AWSCodeDeployPublisher extends Publisher {
         return sourcePath;
     }
 
+    private String getPackageName(AbstractBuild build) {
+        if (packageName != null && packageName.length() != 0) {
+            return packageName;
+        } else {
+            return build.getProject().getName();;
+        }
+    }
+
     private boolean isSubDirectory(FilePath parent, FilePath child) {
         FilePath parentFolder = child;
         while (parentFolder!=null) {
@@ -296,7 +307,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         }
     }
 
-    private RevisionLocation zipAndUpload(AWSClients aws, String projectName, FilePath sourceDirectory) throws IOException, InterruptedException, IllegalArgumentException {
+    private RevisionLocation zipAndUpload(AWSClients aws, String zipName, FilePath sourceDirectory) throws IOException, InterruptedException, IllegalArgumentException {
 
         File zipFile = null;
         File versionFile;
@@ -317,13 +328,13 @@ public class AWSCodeDeployPublisher extends Publisher {
         }
 
         if (version != null){
-          zipFile = new File("/tmp/" + projectName + "-" + version + ".zip");
+          zipFile = new File("/tmp/" + zipFilename + "-" + version + ".zip");
           final boolean fileCreated = zipFile.createNewFile();
           if (!fileCreated) {
             logger.println("File already exists, overwriting: " + zipFile.getPath());
           }
         } else {
-          zipFile = File.createTempFile(projectName + "-", ".zip");
+          zipFile = File.createTempFile(zipName + "-", ".zip");
         }
 
         String key;
