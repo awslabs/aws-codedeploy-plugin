@@ -7,7 +7,7 @@
   </parent>
 
   <artifactId>codedeploy</artifactId>
-  <version>1.17-SNAPSHOT</version>
+  <version>1.17-CONTENT</version>
   <packaging>hpi</packaging>
   <groupId>com.amazonaws</groupId>
   <name>AWS CodeDeploy Plugin for Jenkins</name>
@@ -52,9 +52,9 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.jenkins-ci.plugins</groupId>
+      <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk</artifactId>
-      <version>1.11.119</version>
+      <version>1.11.203</version>
     </dependency>
   </dependencies>
 
