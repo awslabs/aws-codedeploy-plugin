@@ -67,7 +67,7 @@ import java.util.UUID;
 
 import javax.servlet.ServletException;
 
-/**
+/*
  * The AWS CodeDeploy Publisher is a post-build plugin that adds the ability to start a new CodeDeploy deployment
  * with the project's workspace as the application revision.
  * <p/>
@@ -104,6 +104,7 @@ public class AWSCodeDeployPublisher extends Publisher {
     private final String credentials;
     private final String deploymentMethod;
     private final String versionFileName;
+    private final String fileExistsBehaviour;
 
     private PrintStream logger;
     private Map <String, String> envVars;
@@ -131,7 +132,8 @@ public class AWSCodeDeployPublisher extends Publisher {
             String proxyHost,
             int proxyPort,
             String excludes,
-            String subdirectory) {
+            String subdirectory,
+            String fileExistsBehaviour) {
 
         this.externalId = externalId;
         this.applicationName = applicationName;
@@ -154,6 +156,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         this.awsSecretKey = awsSecretKey;
         this.iamRoleArn = iamRoleArn;
         this.deploymentGroupAppspec = deploymentGroupAppspec;
+        this.fileExistsBehaviour = fileExistsBehaviour;
 
         if (waitForCompletion != null && waitForCompletion) {
             this.waitForCompletion = waitForCompletion;
@@ -419,6 +422,7 @@ public class AWSCodeDeployPublisher extends Publisher {
                         .withApplicationName(getApplicationNameFromEnv())
                         .withRevision(revisionLocation)
                         .withDescription("Deployment created by Jenkins")
+                        .withFileExistsBehavior(getFileExistsBehaviour())
         );
 
         return createDeploymentResult.getDeploymentId();
@@ -492,7 +496,7 @@ public class AWSCodeDeployPublisher extends Publisher {
         return BuildStepMonitor.STEP;
     }
 
-    /**
+    /*
      * Descriptor for {@link AWSCodeDeployPublisher}. Used as a singleton.
      * The class is marked as public so that it can be accessed from views.
      * <p/>
@@ -725,6 +729,10 @@ public class AWSCodeDeployPublisher extends Publisher {
 
     public int getProxyPort() {
         return proxyPort;
+    }
+
+    public String getFileExistsBehaviour() {
+        return fileExistsBehaviour;
     }
 
     public String getApplicationNameFromEnv() {

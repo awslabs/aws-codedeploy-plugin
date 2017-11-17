@@ -61,6 +61,26 @@
       </f:optionalBlock>
     </f:radioBlock>
 
+    <f:entry title="ContentOptions">
+    <f:radioBlock title="Disallow" name="fileExistsBehaviour" value="DISALLOW" checked="${instance.getFileExistsBehaviour() == 'DISALLOW'}" inline="true">
+      <f:description>
+        The deployment fails. This is also the default behavior if no option is specified.
+      </f:description>
+    </f:radioBlock>
+
+    <f:radioBlock title="Overwrite" name="fileExistsBehaviour" value="OVERWRITE" checked="${instance.getFileExistsBehaviour() == 'OVERWRITE'}" inline="true">
+      <f:description>
+        The version of the file from the application revision currently being deployed replaces the version already on the instance.
+      </f:description>
+    </f:radioBlock>
+
+    <f:radioBlock title="Retain" name="fileExistsBehaviour" value="RETAIN" checked="${instance.getFileExistsBehaviour() == 'RETAIN'}" inline="true">
+      <f:description>
+        The version of the file already on the instance is kept and used as part of the new deployment.
+      </f:description>
+    </f:radioBlock>
+    </f:entry>
+
   <f:radioBlock title="Use Access/Secret keys" name="credentials" checked="${instance.getCredentials() == 'awsAccessKey'}" inline="true" value="awsAccessKey">
     <f:description>
       If these keys are left blank, the plugin will attempt to use credentials from the default provider chain. That

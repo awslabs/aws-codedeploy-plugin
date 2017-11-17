@@ -1,12 +1,12 @@
 /*
  * Copyright 2014 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
  * A copy of the License is located at
- * 
+ *
  *  http://aws.amazon.com/apache2.0
- * 
+ *
  * or in the "license" file accompanying this file. This file is distributed
  * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
  * express or implied. See the License for the specific language governing
@@ -74,20 +74,20 @@ public class AWSClients {
         codedeploy.setRegion(Region.getRegion(Regions.fromName(this.region)));
         s3.setRegion(Region.getRegion(Regions.fromName(this.region)));
     }
-    
+
     public static AWSClients fromDefaultCredentialChain(String region, String proxyHost, int proxyPort) {
         return new AWSClients(region, null, proxyHost, proxyPort);
     }
-    
+
     public static AWSClients fromIAMRole(String region, String iamRole, String externalId, String proxyHost, int proxyPort) {
         return new AWSClients(region, getCredentials(iamRole, externalId), proxyHost, proxyPort);
     }
-    
+
     public static AWSClients fromBasicCredentials(String region, String awsAccessKey, String awsSecretKey, String proxyHost, int proxyPort) {
         return new AWSClients(region, new BasicAWSCredentials(awsAccessKey, awsSecretKey), proxyHost, proxyPort);
     }
 
-    /**
+    /*
      * Via the default provider chain (i.e., global keys for this Jenkins instance),  return the account ID for the
      * currently authenticated user.
      * @return 12-digit account id
