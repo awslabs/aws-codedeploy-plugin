@@ -6,6 +6,10 @@ project. Upon a successful build, it will zip the workspace, upload to S3, and
 start a new deployment. Optionally, you can set it to wait for the deployment to
 finish, making the final success contingent on the success of the deployment.
 
+### Build Status
+
+[![Build Status](https://ci.jenkins.io/buildStatus/icon?job=Plugins/aws-codedeploy-plugin/master)](https://ci.jenkins.io/job/Plugins/job/aws-codedeploy-plugin/job/master/)
+
 Setting up
 ----------
 
