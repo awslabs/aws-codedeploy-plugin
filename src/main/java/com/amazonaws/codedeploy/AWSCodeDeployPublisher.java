@@ -31,22 +31,22 @@ import com.amazonaws.services.codedeploy.model.GetDeploymentRequest;
 import com.amazonaws.services.codedeploy.model.RegisterApplicationRevisionRequest;
 import com.amazonaws.services.codedeploy.model.S3Location;
 
+import hudson.AbortException;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.Extension;
 import hudson.Util;
-import hudson.model.AbstractBuild;
-import hudson.model.BuildListener;
+import hudson.Extension;
 import hudson.model.AbstractProject;
 import hudson.model.Result;
+import hudson.model.Run;
+import hudson.model.TaskListener;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Publisher;
 import hudson.util.DirScanner;
-import hudson.util.FileVisitor;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
-import net.sf.json.JSONException;
+import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
 
 import org.apache.commons.lang.StringUtils;
@@ -65,6 +65,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 
 /**
@@ -75,7 +76,7 @@ import javax.servlet.ServletException;
  * the globally configured keys. This allows the plugin to get temporary credentials instead of requiring permanent
  * credentials to be configured for each project.
  */
-public class AWSCodeDeployPublisher extends Publisher {
+public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep {
     public static final long      DEFAULT_TIMEOUT_SECONDS           = 900;
     public static final long      DEFAULT_POLLING_FREQUENCY_SECONDS = 15;
     public static final String    ROLE_SESSION_NAME                 = "jenkins-codedeploy-plugin";
@@ -182,13 +183,13 @@ public class AWSCodeDeployPublisher extends Publisher {
     }
 
     @Override
-    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
+    public void perform(@Nonnull Run<?,?> build, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws IOException, InterruptedException {
         this.logger = listener.getLogger();
         envVars = build.getEnvironment(listener);
         final boolean buildFailed = build.getResult() == Result.FAILURE;
         if (buildFailed) {
             logger.println("Skipping CodeDeploy publisher as build failed");
-            return true;
+            return;
         }
 
         final AWSClients aws;
@@ -215,14 +216,13 @@ public class AWSCodeDeployPublisher extends Publisher {
                 this.proxyPort);
         }
 
-        boolean success;
+        boolean success = false;
 
         try {
 
             verifyCodeDeployApplication(aws);
 
-            final String projectName = build.getProject().getName();
-            final FilePath workspace = build.getWorkspace();
+            final String projectName = build.getDisplayName();
             if (workspace == null) {
                 throw new IllegalArgumentException("No workspace present for the build.");
             }
@@ -244,11 +244,11 @@ public class AWSCodeDeployPublisher extends Publisher {
             this.logger.println("Failed CodeDeploy post-build step; exception follows.");
             this.logger.println(e.getMessage());
             e.printStackTrace(this.logger);
-            success = false;
-
         }
 
-        return success;
+        if (!success) {
+            throw new AbortException();
+        }
     }
 
     private FilePath getSourceDirectory(FilePath basePath) throws IOException, InterruptedException {
@@ -492,6 +492,7 @@ public class AWSCodeDeployPublisher extends Publisher {
     }
 
     /**
+     *
      * Descriptor for {@link AWSCodeDeployPublisher}. Used as a singleton.
      * The class is marked as public so that it can be accessed from views.
      *
