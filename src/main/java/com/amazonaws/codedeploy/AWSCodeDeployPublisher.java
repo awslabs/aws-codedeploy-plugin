@@ -65,6 +65,8 @@ import java.io.PrintStream;
 import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
+import java.util.List;
+import java.util.ArrayList;
 
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
@@ -249,9 +251,9 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
               success = true;
             } else {
 
-              String deploymentId = createDeployment(aws, revisionLocation);
+              List<String> deploymentIds = createDeployment(aws, revisionLocation);
 
-              success = waitForDeployment(aws, deploymentId);
+              success = waitForDeployment(aws, deploymentIds);
             }
 
         } catch (Exception e) {
@@ -300,15 +302,37 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
             throw new IllegalArgumentException("Cannot find application named '" + applicationName + "'");
         }
 
-        // Check that the deployment group exists
-        ListDeploymentGroupsResult deploymentGroups = aws.codedeploy.listDeploymentGroups(
+        List<String> matchingGroups = getMatchingDeploymentGroup(aws, deploymentGroupName);
+
+        if (matchingGroups.isEmpty()) {
+            throw new IllegalArgumentException("Cannot find deployment group matching with '" + deploymentGroupName + "'");
+        }
+    }
+
+    private List<String> getMatchingDeploymentGroup(AWSClients aws, String deploymentGroupName) {
+        List<String> matchingGroups = new ArrayList<String>();
+        List<String> deploymentGroups = aws.codedeploy.listDeploymentGroups(
                 new ListDeploymentGroupsRequest()
                         .withApplicationName(applicationName)
-        );
-
-        if (!deploymentGroups.getDeploymentGroups().contains(deploymentGroupName)) {
-            throw new IllegalArgumentException("Cannot find deployment group named '" + deploymentGroupName + "'");
+        ).getDeploymentGroups();
+        // all groups under application
+        if(deploymentGroupName.equals("*")) {
+            return deploymentGroups;
         }
+        // Groups starting with specific word
+        if(deploymentGroupName.endsWith("*")) {
+            deploymentGroupName = deploymentGroupName.replace("*", "$");
+        }
+        // Groups ending with specific word
+        if(deploymentGroupName.startsWith("*")) {
+            deploymentGroupName = deploymentGroupName.replace("*", "^");
+        }
+        for(String eachGroupName : deploymentGroups) {
+            if(eachGroupName.matches(deploymentGroupName)) {
+                matchingGroups.add(eachGroupName);
+            }
+        }
+        return  matchingGroups;
     }
 
     private RevisionLocation zipAndUpload(AWSClients aws, String projectName, FilePath sourceDirectory) throws IOException, InterruptedException, IllegalArgumentException {
@@ -435,73 +459,85 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
         );
     }
 
-    private String createDeployment(AWSClients aws, RevisionLocation revisionLocation) throws Exception {
+    private List<String> createDeployment(AWSClients aws, RevisionLocation revisionLocation) throws Exception {
 
         this.logger.println("Creating deployment with revision at " + revisionLocation);
+        String deploymentGroupName = getDeploymentGroupNameFromEnv();
+        List<String> deploymnetIds = new ArrayList<String>();
 
-        CreateDeploymentResult createDeploymentResult = aws.codedeploy.createDeployment(
-                new CreateDeploymentRequest()
-                        .withDeploymentConfigName(getDeploymentConfigFromEnv())
-                        .withDeploymentGroupName(getDeploymentGroupNameFromEnv())
-                        .withApplicationName(getApplicationNameFromEnv())
-                        .withRevision(revisionLocation)
-                        .withDescription("Deployment created by Jenkins")
-        );
+        List<String> deploymentGroups = getMatchingDeploymentGroup(aws, deploymentGroupName);
 
-        return createDeploymentResult.getDeploymentId();
+        for(String eachGroup : deploymentGroups) {
+            CreateDeploymentResult createDeploymentResult = aws.codedeploy.createDeployment(
+                    new CreateDeploymentRequest()
+                            .withDeploymentConfigName(getDeploymentConfigFromEnv())
+                            .withDeploymentGroupName(eachGroup)
+                            .withApplicationName(getApplicationNameFromEnv())
+                            .withRevision(revisionLocation)
+                            .withDescription("Deployment created by Jenkins")
+            );
+            deploymnetIds.add(createDeploymentResult.getDeploymentId());
+        }
+
+        return deploymnetIds;
     }
 
-    private boolean waitForDeployment(AWSClients aws, String deploymentId) throws InterruptedException {
+    private boolean waitForDeployment(AWSClients aws, List<String> deploymentIds) throws InterruptedException {
 
         if (!this.waitForCompletion) {
             return true;
         }
 
-        logger.println("Monitoring deployment with ID " + deploymentId + "...");
-        GetDeploymentRequest deployInfoRequest = new GetDeploymentRequest();
-        deployInfoRequest.setDeploymentId(deploymentId);
-
-        DeploymentInfo deployStatus = aws.codedeploy.getDeployment(deployInfoRequest).getDeploymentInfo();
-
-        long startTimeMillis;
-        if (deployStatus == null || deployStatus.getStartTime() == null) {
-            startTimeMillis = new Date().getTime();
-        } else {
-            startTimeMillis = deployStatus.getStartTime().getTime();
-        }
-
         boolean success = true;
-        long pollingTimeoutMillis = this.pollingTimeoutSec * 1000L;
-        long pollingFreqMillis = this.pollingFreqSec * 1000L;
 
-        while (deployStatus == null || deployStatus.getCompleteTime() == null) {
+        for(String eachDeploymentId : deploymentIds) {
+            logger.println("Monitoring deployment with ID " + eachDeploymentId + "...");
+            GetDeploymentRequest deployInfoRequest = new GetDeploymentRequest();
+            deployInfoRequest.setDeploymentId(eachDeploymentId);
 
-            if (deployStatus == null) {
-                logger.println("Deployment status: unknown.");
+            DeploymentInfo deployStatus = aws.codedeploy.getDeployment(deployInfoRequest).getDeploymentInfo();
+
+            long startTimeMillis;
+            if (deployStatus == null || deployStatus.getStartTime() == null) {
+                startTimeMillis = new Date().getTime();
             } else {
-                DeploymentOverview overview = deployStatus.getDeploymentOverview();
-                logger.println("Deployment status: " + deployStatus.getStatus() + "; instances: " + overview);
+                startTimeMillis = deployStatus.getStartTime().getTime();
             }
 
-            deployStatus = aws.codedeploy.getDeployment(deployInfoRequest).getDeploymentInfo();
-            Date now = new Date();
+            long pollingTimeoutMillis = this.pollingTimeoutSec * 1000L;
+            long pollingFreqMillis = this.pollingFreqSec * 1000L;
 
-            if (now.getTime() - startTimeMillis >= pollingTimeoutMillis) {
-                this.logger.println("Exceeded maximum polling time of " + pollingTimeoutMillis + " milliseconds.");
+            while (deployStatus == null || deployStatus.getCompleteTime() == null) {
+
+                if (deployStatus == null) {
+                    logger.println("Deployment status: unknown.");
+                } else {
+                    DeploymentOverview overview = deployStatus.getDeploymentOverview();
+                    logger.println("Deployment status: " + deployStatus.getStatus() + "; instances: " + overview);
+                }
+
+                deployStatus = aws.codedeploy.getDeployment(deployInfoRequest).getDeploymentInfo();
+                Date now = new Date();
+
+                if (now.getTime() - startTimeMillis >= pollingTimeoutMillis) {
+                    this.logger.println("Exceeded maximum polling time of " + pollingTimeoutMillis + " milliseconds.");
+                    success = false;
+                    break;
+                }
+
+                Thread.sleep(pollingFreqMillis);
+            }
+
+            logger.println("Deployment status: " + deployStatus.getStatus() + "; instances: " + deployStatus.getDeploymentOverview());
+
+            if (!deployStatus.getStatus().equals(DeploymentStatus.Succeeded.toString())) {
+                this.logger.println("Deployment did not succeed. Final status: " + deployStatus.getStatus());
                 success = false;
+            }
+            if(!success){
                 break;
             }
-
-            Thread.sleep(pollingFreqMillis);
         }
-
-        logger.println("Deployment status: " + deployStatus.getStatus() + "; instances: " + deployStatus.getDeploymentOverview());
-
-        if (!deployStatus.getStatus().equals(DeploymentStatus.Succeeded.toString())) {
-            this.logger.println("Deployment did not succeed. Final status: " + deployStatus.getStatus());
-            success = false;
-        }
-
         return success;
     }
 
