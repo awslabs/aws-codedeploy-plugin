@@ -107,6 +107,7 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
     private final String awsSecretKey;
     private final String credentials;
     private final String deploymentMethod;
+    private final String zipNamePrefix;
     private final String versionFileName;
 
     private PrintStream logger;
@@ -127,6 +128,7 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
             Long pollingTimeoutSec,
             Long pollingFreqSec,
             String credentials,
+            String zipNamePrefix,
             String versionFileName,
             String deploymentMethod,
             String awsAccessKey,
@@ -155,6 +157,7 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
         this.proxyPort = proxyPort;
         this.credentials = credentials;
         this.deploymentMethod = deploymentMethod;
+        this.zipNamePrefix = zipNamePrefix;
         this.versionFileName = versionFileName;
         this.awsAccessKey = awsAccessKey;
         this.awsSecretKey = awsSecretKey;
@@ -230,7 +233,14 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
 
             verifyCodeDeployApplication(aws);
 
-            final String projectName = build.getDisplayName();
+            String projectName = null;
+            logger.println("Zip name prefix: " + this.zipNamePrefix );
+            if (this.zipNamePrefix != null && this.zipNamePrefix.trim().length() > 0) {
+                projectName = build.getEnvironment(listener).expand(zipNamePrefix.trim());
+            } else {
+                projectName = build.getDisplayName();
+            }
+
             if (workspace == null) {
                 throw new IllegalArgumentException("No workspace present for the build.");
             }
@@ -317,6 +327,8 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
         File versionFile;
         versionFile = new File(sourceDirectory + "/" + versionFileName);
 
+        logger.println("Project name: " + projectName + " - Version file path : " + versionFile.getAbsolutePath() + " - Version filename : " + versionFileName);
+
         InputStreamReader reader = null;
         String version = null;
         try {
@@ -332,7 +344,9 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
         }
 
         if (version != null){
-          zipFile = new File("/tmp/" + projectName + "-" + version + ".zip");
+          String tempDir = System.getProperty("java.io.tmpdir");
+
+          zipFile = new File(tempDir + File.separator + projectName + "-" + version + ".zip");
           final boolean fileCreated = zipFile.createNewFile();
           if (!fileCreated) {
             logger.println("File already exists, overwriting: " + zipFile.getPath());
@@ -711,6 +725,10 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
 
     public String getDeploymentMethod() {
         return deploymentMethod;
+    }
+
+    public String getZipNamePrefix() {
+        return zipNamePrefix;
     }
 
     public String getVersionFileName() {

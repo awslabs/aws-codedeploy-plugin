@@ -39,6 +39,9 @@
   <f:entry title="Proxy Port" field="proxyPort">
     <f:textbox default="" />
   </f:entry>
+  <f:entry title="Zip Name Prefix" field="zipNamePrefix">
+    <f:textbox />
+  </f:entry>
   <f:entry title="Version File" field="versionFileName">
     <f:textbox />
   </f:entry>
