@@ -90,6 +90,7 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
     private final String  applicationName;
     private final String  deploymentGroupName; // TODO allow for deployment to multiple groups
     private final String  deploymentConfig;
+    private final String  deploymentDescription;
     private final Long    pollingTimeoutSec;
     private final Long    pollingFreqSec;
     private final boolean deploymentGroupAppspec;
@@ -121,6 +122,7 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
             String applicationName,
             String deploymentGroupName,
             String deploymentConfig,
+            String deploymentDescription,
             String region,
             Boolean deploymentGroupAppspec,
             Boolean waitForCompletion,
@@ -147,6 +149,7 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
         } else {
             this.deploymentConfig = deploymentConfig;
         }
+        this.deploymentDescription = deploymentDescription;
         this.region = region;
         this.includes = includes;
         this.excludes = excludes;
@@ -445,7 +448,7 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
                         .withDeploymentGroupName(getDeploymentGroupNameFromEnv())
                         .withApplicationName(getApplicationNameFromEnv())
                         .withRevision(revisionLocation)
-                        .withDescription("Deployment created by Jenkins")
+                        .withDescription(getDeploymentDescriptionFromEnv())
         );
 
         return createDeploymentResult.getDeploymentId();
@@ -677,6 +680,10 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
         return deploymentConfig;
     }
 
+    public String getDeploymentDescription() {
+        return deploymentDescription;
+    }
+
     public String getS3bucket() {
         return s3bucket;
     }
@@ -763,6 +770,10 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
 
     public String getDeploymentConfigFromEnv() {
         return Util.replaceMacro(this.deploymentConfig, envVars);
+    }
+
+    public String getDeploymentDescriptionFromEnv() {
+        return Util.replaceMacro(this.deploymentDescription, envVars);
     }
 
     public String getS3BucketFromEnv() {

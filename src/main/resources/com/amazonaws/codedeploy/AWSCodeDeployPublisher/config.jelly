@@ -9,6 +9,9 @@
   <f:entry title="AWS CodeDeploy Deployment Config" field="deploymentConfig">
     <f:textbox />
   </f:entry>
+  <f:entry title="AWS CodeDeploy Deployment Description" field="deploymentDescription">
+    <f:textbox />
+  </f:entry>
   <f:entry title="AWS Region" field="region">
     <f:select />
   </f:entry>
