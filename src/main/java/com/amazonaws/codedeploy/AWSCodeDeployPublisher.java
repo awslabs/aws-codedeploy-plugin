@@ -14,13 +14,18 @@
  */
 package com.amazonaws.codedeploy;
 
+import javax.annotation.Nonnull;
+import javax.servlet.ServletException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintStream;
+import java.util.Date;
+import java.util.Map;
+import java.util.UUID;
 import com.amazonaws.regions.Regions;
-import com.amazonaws.services.codedeploy.model.ListApplicationsResult;
-import com.amazonaws.services.codedeploy.model.ListDeploymentGroupsRequest;
-import com.amazonaws.services.codedeploy.model.ListDeploymentGroupsResult;
-import com.amazonaws.services.codedeploy.model.RevisionLocation;
-import com.amazonaws.services.codedeploy.model.RevisionLocationType;
-import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.codedeploy.model.BundleType;
 import com.amazonaws.services.codedeploy.model.CreateDeploymentRequest;
 import com.amazonaws.services.codedeploy.model.CreateDeploymentResult;
@@ -28,46 +33,37 @@ import com.amazonaws.services.codedeploy.model.DeploymentInfo;
 import com.amazonaws.services.codedeploy.model.DeploymentOverview;
 import com.amazonaws.services.codedeploy.model.DeploymentStatus;
 import com.amazonaws.services.codedeploy.model.GetDeploymentRequest;
-import com.amazonaws.services.codedeploy.model.RegisterApplicationRevisionRequest;
-import com.amazonaws.services.codedeploy.model.S3Location;
 import com.amazonaws.services.codedeploy.model.GitHubLocation;
-
+import com.amazonaws.services.codedeploy.model.ListApplicationsResult;
+import com.amazonaws.services.codedeploy.model.ListDeploymentGroupsRequest;
+import com.amazonaws.services.codedeploy.model.ListDeploymentGroupsResult;
+import com.amazonaws.services.codedeploy.model.RegisterApplicationRevisionRequest;
+import com.amazonaws.services.codedeploy.model.RevisionLocation;
+import com.amazonaws.services.codedeploy.model.RevisionLocationType;
+import com.amazonaws.services.codedeploy.model.S3Location;
+import com.amazonaws.services.s3.model.PutObjectResult;
 import hudson.AbortException;
+import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
-import hudson.Extension;
 import hudson.model.AbstractProject;
 import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
-import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.BuildStepDescriptor;
+import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Publisher;
 import hudson.util.DirScanner;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
-
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStreamReader;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.util.Date;
-import java.util.Map;
-import java.util.UUID;
-
-import javax.annotation.Nonnull;
-import javax.servlet.ServletException;
 
 /**
  * The AWS CodeDeploy Publisher is a post-build plugin that adds the ability to start a new CodeDeploy deployment
@@ -78,10 +74,11 @@ import javax.servlet.ServletException;
  * credentials to be configured for each project.
  */
 public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep {
-    public static final long      DEFAULT_TIMEOUT_SECONDS           = 900;
-    public static final long      DEFAULT_POLLING_FREQUENCY_SECONDS = 15;
-    public static final String    ROLE_SESSION_NAME                 = "jenkins-codedeploy-plugin";
-    private static final Regions[] AVAILABLE_REGIONS                 = {Regions.AP_NORTHEAST_1, Regions.AP_SOUTHEAST_1, Regions.AP_SOUTHEAST_2, Regions.EU_WEST_1, Regions.US_EAST_1, Regions.US_WEST_2, Regions.EU_CENTRAL_1, Regions.US_WEST_1, Regions.SA_EAST_1, Regions.AP_NORTHEAST_2, Regions.AP_SOUTH_1, Regions.US_EAST_2, Regions.CA_CENTRAL_1, Regions.EU_WEST_2, Regions.CN_NORTH_1};
+    public static final long      DEFAULT_TIMEOUT_SECONDS               = 900;
+    public static final long      DEFAULT_POLLING_FREQUENCY_SECONDS     = 15;
+    public static final String    ROLE_SESSION_NAME                     = "jenkins-codedeploy-plugin";
+    public static final String    CODE_DEPLOY_REVISION_ZIP_FILENAME     = "CODE_DEPLOY_REVISION_ZIP_FILENAME";
+    private static final Regions[] AVAILABLE_REGIONS                    = {Regions.AP_NORTHEAST_1, Regions.AP_SOUTHEAST_1, Regions.AP_SOUTHEAST_2, Regions.EU_WEST_1, Regions.US_EAST_1, Regions.US_WEST_2, Regions.EU_CENTRAL_1, Regions.US_WEST_1, Regions.SA_EAST_1, Regions.AP_NORTHEAST_2, Regions.AP_SOUTH_1, Regions.US_EAST_2, Regions.CA_CENTRAL_1, Regions.EU_WEST_2, Regions.CN_NORTH_1};
 
     private final String  s3bucket;
     private final String  s3prefix;
@@ -316,7 +313,7 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
         File zipFile = null;
         File versionFile;
         versionFile = new File(sourceDirectory + "/" + versionFileName);
-        String zipFileNameFromEnv = envVars.get("CODE_DEPLOY_REVISION_ZIP_FILENAME");
+        String zipFileNameFromEnv = envVars.get(CODE_DEPLOY_REVISION_ZIP_FILENAME);
 
         InputStreamReader reader = null;
         String version = null;
