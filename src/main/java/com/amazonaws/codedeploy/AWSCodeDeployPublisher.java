@@ -316,6 +316,7 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
         File zipFile = null;
         File versionFile;
         versionFile = new File(sourceDirectory + "/" + versionFileName);
+        String zipFileNameFromEnv = envVars.get("CODE_DEPLOY_REVISION_ZIP_FILENAME");
 
         InputStreamReader reader = null;
         String version = null;
@@ -331,7 +332,9 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
           if(reader !=null){reader.close();}
         }
 
-        if (version != null){
+        if (StringUtils.isNotEmpty(zipFileNameFromEnv)) {
+            zipFile = File.createTempFile(zipFileNameFromEnv, ".zip");
+        } else if (version != null){
           zipFile = new File("/tmp/" + projectName + "-" + version + ".zip");
           final boolean fileCreated = zipFile.createNewFile();
           if (!fileCreated) {
