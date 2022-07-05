@@ -78,10 +78,11 @@ import javax.servlet.ServletException;
  * credentials to be configured for each project.
  */
 public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep {
-    public static final long      DEFAULT_TIMEOUT_SECONDS           = 900;
-    public static final long      DEFAULT_POLLING_FREQUENCY_SECONDS = 15;
-    public static final String    ROLE_SESSION_NAME                 = "jenkins-codedeploy-plugin";
-    private static final Regions[] AVAILABLE_REGIONS                 = {Regions.AP_NORTHEAST_1, Regions.AP_SOUTHEAST_1, Regions.AP_SOUTHEAST_2, Regions.EU_WEST_1, Regions.US_EAST_1, Regions.US_WEST_2, Regions.EU_CENTRAL_1, Regions.US_WEST_1, Regions.SA_EAST_1, Regions.AP_NORTHEAST_2, Regions.AP_SOUTH_1, Regions.US_EAST_2, Regions.CA_CENTRAL_1, Regions.EU_WEST_2, Regions.CN_NORTH_1};
+    public static final long        DEFAULT_TIMEOUT_SECONDS           = 900;
+    public static final long        DEFAULT_POLLING_FREQUENCY_SECONDS = 15;
+    public static final String      ROLE_SESSION_NAME                 = "jenkins-codedeploy-plugin";
+    public static final String      CODE_DEPLOY_REVISION_ZIP_FILENAME = "CODE_DEPLOY_REVISION_ZIP_FILENAME";
+    private static final Regions[]  AVAILABLE_REGIONS                 = {Regions.AP_NORTHEAST_1, Regions.AP_SOUTHEAST_1, Regions.AP_SOUTHEAST_2, Regions.EU_WEST_1, Regions.US_EAST_1, Regions.US_WEST_2, Regions.EU_CENTRAL_1, Regions.US_WEST_1, Regions.SA_EAST_1, Regions.AP_NORTHEAST_2, Regions.AP_SOUTH_1, Regions.US_EAST_2, Regions.CA_CENTRAL_1, Regions.EU_WEST_2, Regions.CN_NORTH_1};
 
     private final String  s3bucket;
     private final String  s3prefix;
@@ -316,6 +317,7 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
         File zipFile = null;
         File versionFile;
         versionFile = new File(sourceDirectory + "/" + versionFileName);
+        String zipFileNameFromEnv = envVars.get(CODE_DEPLOY_REVISION_ZIP_FILENAME);
 
         InputStreamReader reader = null;
         String version = null;
@@ -331,7 +333,9 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
           if(reader !=null){reader.close();}
         }
 
-        if (version != null){
+        if (StringUtils.isNotEmpty(zipFileNameFromEnv)) {
+            zipFile = File.createTempFile(zipFileNameFromEnv, ".zip");
+        } else if (version != null){
           zipFile = new File("/tmp/" + projectName + "-" + version + ".zip");
           final boolean fileCreated = zipFile.createNewFile();
           if (!fileCreated) {
