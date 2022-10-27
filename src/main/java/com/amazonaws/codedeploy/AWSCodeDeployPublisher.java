@@ -219,7 +219,7 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
             aws = AWSClients.fromIAMRole(
                 this.region,
                 this.iamRoleArn,
-                this.getDescriptor().getExternalId(),
+                this.externalId,
                 this.proxyHost,
                 this.proxyPort);
         }
