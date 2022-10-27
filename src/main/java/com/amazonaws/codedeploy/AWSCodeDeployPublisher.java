@@ -523,7 +523,7 @@ public class AWSCodeDeployPublisher extends Publisher implements SimpleBuildStep
      * Descriptor for {@link AWSCodeDeployPublisher}. Used as a singleton.
      * The class is marked as public so that it can be accessed from views.
      *
-     * See <tt>src/main/resources/com/amazonaws/codedeploy/AWSCodeDeployPublisher/*.jelly</tt>
+     * See <code>src/main/resources/com/amazonaws/codedeploy/AWSCodeDeployPublisher/*.jelly</code>
      * for the actual HTML fragment for the configuration screen.
      */
     @Extension // This indicates to Jenkins that this is an implementation of an extension point.
